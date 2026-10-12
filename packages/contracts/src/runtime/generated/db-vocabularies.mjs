@@ -7,7 +7,6 @@ import vocabularyPart04 from "./db-vocabularies/part-04.mjs";
 import vocabularyPart05 from "./db-vocabularies/part-05.mjs";
 import vocabularyPart06 from "./db-vocabularies/part-06.mjs";
 import vocabularyPart07 from "./db-vocabularies/part-07.mjs";
-import vocabularyPart08 from "./db-vocabularies/part-08.mjs";
 
 export * from "./db-vocabularies/part-01.mjs";
 export * from "./db-vocabularies/part-02.mjs";
@@ -16,7 +15,6 @@ export * from "./db-vocabularies/part-04.mjs";
 export * from "./db-vocabularies/part-05.mjs";
 export * from "./db-vocabularies/part-06.mjs";
 export * from "./db-vocabularies/part-07.mjs";
-export * from "./db-vocabularies/part-08.mjs";
 
 export const DATABASE_CHECK_VOCABULARIES = Object.freeze([
 	...vocabularyPart01,
@@ -26,5 +24,4 @@ export const DATABASE_CHECK_VOCABULARIES = Object.freeze([
 	...vocabularyPart05,
 	...vocabularyPart06,
 	...vocabularyPart07,
-	...vocabularyPart08,
 ]);

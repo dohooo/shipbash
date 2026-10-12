@@ -20,9 +20,6 @@ export const PUBLIC_ACTIVITIES_STATUS_VALUES = Object.freeze([
 ]);
 export const PUBLIC_ACTIVITIES_TRIGGER_SOURCE_VALUES = Object.freeze([
 	"web",
-	"cli",
-	"webhook",
-	"schedule",
 	"retry",
 	"slack",
 ]);

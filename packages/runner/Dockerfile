@@ -60,7 +60,11 @@ RUN bun run --filter @shipbash/contracts build \
 FROM node:24-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
 
 ARG TARGETARCH
-ARG CHROMIUM_VERSION=154.0.8037.92-1~deb12u1
+
+# Chromium is not pinned to a package version: Debian drops superseded builds
+# from its mirrors, so an exact pin makes the image unbuildable once its
+# version rotates out. A build takes the Chromium the base image's Debian
+# release currently ships, and the base image digest keeps that release fixed.
 
 # Dependency spillover apt cannot decline: packages Debian declares as hard
 # dependencies that nothing in this image ever loads. Each is removed with
@@ -87,9 +91,9 @@ RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates \
-      "chromium=${CHROMIUM_VERSION}" \
-      "chromium-common=${CHROMIUM_VERSION}" \
-      "chromium-sandbox=${CHROMIUM_VERSION}" \
+      chromium \
+      chromium-common \
+      chromium-sandbox \
       curl \
       ffmpeg \
       fonts-dejavu-core \
@@ -239,7 +243,7 @@ RUN find / -xdev -type f -perm -4000 ! -path /usr/lib/chromium/chrome-sandbox -e
 # the agent's, whose Playwright contexts have no profile to seed, and the
 # takeover viewer's alike — so no "Save password?" bubble ever covers a
 # sign-in. A managed policy is the one switch that reaches every profile and
-# every off-the-record context (Chromium 154 reports it on chrome://policy as
+# every off-the-record context (chrome://policy reports it as
 # Platform / Machine / Mandatory / OK).
 RUN mkdir -p /etc/chromium/policies/managed \
     && printf '%s\n' '{"PasswordManagerEnabled": false}' > /etc/chromium/policies/managed/shipbash.json

@@ -7,7 +7,6 @@ export * from "./db-vocabularies/part-04.mjs";
 export * from "./db-vocabularies/part-05.mjs";
 export * from "./db-vocabularies/part-06.mjs";
 export * from "./db-vocabularies/part-07.mjs";
-export * from "./db-vocabularies/part-08.mjs";
 
 export interface DatabaseCheckVocabulary {
 	readonly schema: string;
