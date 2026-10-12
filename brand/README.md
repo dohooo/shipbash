@@ -1,7 +1,9 @@
 # ShipBash brand assets
 
 This directory is the canonical, reviewable home for ShipBash brand files.
-Every export is generated from `source/shipbash-eye.svg` by:
+Every export is generated from `source/shipbash-eye.svg`, except the repository
+social preview, which is finished artwork kept as
+`source/shipbash-social-preview-1280x640.png` and copied as-is, by:
 
 ```bash
 bun run brand:assets
