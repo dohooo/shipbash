@@ -52,8 +52,7 @@ export async function loadPiSdk(injected) {
  * (composeApiKeyAuth), so pinning it keeps a login some `~/.pi` holds from
  * overriding the gateway key. The key is a reference pi resolves per request,
  * so a missing variable fails the call ("No API key found for openai."). The
- * prompts were tuned at low verbosity, which the provider the agents ran on
- * before sent with every request.
+ * prompts are tuned for low verbosity, so every request asks for it.
  * @param {typeof import("@earendil-works/pi-coding-agent")} pi
  * @param {string} directory
  * @param {string} modelId
