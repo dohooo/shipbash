@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <main className="legal-page">
       <a className="legal-home" href="/">ShipBash</a>
       <h1>Privacy</h1>
-      <p className="legal-updated">Last updated October 3, 2026</p>
+      <p className="legal-updated">Last updated October 12, 2026</p>
 
       <p>
         ShipBash tests your web app or CLI the way your users use it and reports what breaks. This page says what
@@ -33,17 +33,26 @@ export default function PrivacyPage() {
           ShipBash for the product it tests are stored encrypted.
         </li>
         <li>
-          <strong>Connections you choose.</strong> If you connect them: your GitHub repositories (read-only) and a
-          Slack channel for alerts.
+          <strong>Connections you choose.</strong> If you connect GitHub: your repositories, read-only. If you
+          connect Slack: the workspace&apos;s name and ID, the token Slack gives ShipBash (stored encrypted), the
+          channels you choose for alerts, and, when you sign in with Slack, the link between your Slack user and
+          your ShipBash account.
+        </li>
+        <li>
+          <strong>Slack messages.</strong> In the channels ShipBash has been added to, it keeps each message Slack
+          sends it, with its author&apos;s name and Slack ID, its text and references to its images, for a week, so
+          it can read a thread it is asked into. The messages in a thread where someone talks to ShipBash are kept
+          with that conversation. ShipBash reads authors&apos; names, never their email addresses, and posts alerts,
+          replies and recordings in those channels.
         </li>
       </ul>
 
       <h2>How we use it</h2>
       <p>
-        Only to run ShipBash for you: to sign you in, show you to your teammates, run and report your tests, and
-        send the emails and alerts you asked for. If you sign in with a Google Workspace account, its domain puts
-        you in your company&apos;s team on ShipBash, alongside the colleagues who signed in the same way. We do
-        not sell your data, show ads, or use it to train models.
+        Only to run ShipBash for you: to sign you in, show you to your teammates, run and report your tests, answer
+        you in Slack, and send the emails and alerts you asked for. If you sign in with a Google Workspace account,
+        its domain puts you in your company&apos;s team on ShipBash, alongside the colleagues who signed in the same
+        way. We do not sell your data, show ads, or use it to train models.
       </p>
       <p>
         ShipBash&apos;s use of information received from Google APIs adheres to the{" "}
@@ -59,8 +68,19 @@ export default function PrivacyPage() {
       <ul>
         <li>Supabase: database, sign-in and file storage.</li>
         <li>Vercel: hosting, and the isolated machines tests run on.</li>
-        <li>OpenAI: the models behind ShipBash&apos;s agents. What an agent sees of your product while testing it
-          is sent to them.</li>
+        <li>OpenAI: the models behind ShipBash&apos;s agents. What an agent reads while it works is sent to them:
+          what it sees of your product while testing it, what it reads in your repositories, and the Slack threads
+          it is asked into, with the images your team shares there.</li>
+        <li>
+          TypeSafe: Jev, the model that takes a journey&apos;s steps in the browser and judges each page. While it
+          walks a journey, it is sent the page&apos;s address and its text and controls as the browser&apos;s
+          accessibility tree, the terminal&apos;s screen, the journey&apos;s steps and checkpoints, and the actions
+          taken so far, but no screenshots. ShipBash first masks the passwords, one-time codes and session cookies
+          it holds for your product, and does not send a page that mentions a password or a one-time code. Jev is
+          also asked whether a page is a sign-in page, sent without what is typed into its fields; about a
+          journey&apos;s steps as they are written; and whether a Slack message in a thread ShipBash follows is meant
+          for ShipBash, with the few messages before it and their authors&apos; names.
+        </li>
         <li>Resend: email.</li>
         <li>GitHub, Google and Slack: sign-in and the connections you choose.</li>
       </ul>
