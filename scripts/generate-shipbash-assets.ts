@@ -5,7 +5,6 @@ import sharp from "sharp";
 
 import { staticEyePaths } from "../apps/marketing/lib/wobbly-path.ts";
 
-const PAPER = "#f7f5f2";
 const INK = "#141414";
 const BLACK = "#000000";
 const WHITE = "#ffffff";
@@ -59,24 +58,6 @@ function lockupSvg(ink: string): string {
     `<style>@font-face{font-family:Sora;src:url('${soraDataUrl}') format('woff2');font-weight:700}</style>`,
     `<g transform="translate(26 16) scale(.72)">${eyePaths(ink)}</g>`,
     `<text x="350" y="210" fill="${ink}" font-family="Sora, sans-serif" font-size="132" font-weight="700" letter-spacing="-5">ShipBash</text>`,
-    "</svg>",
-  ].join("");
-}
-
-function socialSvg(width: number, height: number, background: string, ink: string): string {
-  const eyeSize = Math.round(height * 0.46);
-  const eyeX = Math.round(width * 0.09);
-  const eyeY = Math.round((height - eyeSize) / 2);
-  const copyX = eyeX + eyeSize + Math.round(width * 0.065);
-  const titleSize = Math.round(height * 0.14);
-  const taglineSize = Math.round(height * 0.052);
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<style>@font-face{font-family:Sora;src:url('${soraDataUrl}') format('woff2');font-weight:700}</style>`,
-    `<rect width="${width}" height="${height}" fill="${background}"/>`,
-    `<svg x="${eyeX}" y="${eyeY}" width="${eyeSize}" height="${eyeSize}" viewBox="-20 -20 440 440">${eyePaths(ink)}</svg>`,
-    `<text x="${copyX}" y="${Math.round(height * 0.48)}" fill="${ink}" font-family="Sora, sans-serif" font-size="${titleSize}" font-weight="700" letter-spacing="-${Math.round(titleSize * 0.035)}">ShipBash</text>`,
-    `<text x="${copyX}" y="${Math.round(height * 0.61)}" fill="${ink}" opacity=".7" font-family="Sora, sans-serif" font-size="${taglineSize}" font-weight="700">You ship it. We bash it.</text>`,
     "</svg>",
   ].join("");
 }
@@ -156,8 +137,6 @@ const [
   favicon32,
   favicon48,
   githubBadgePreview,
-  openGraph,
-  launchCover,
 ] = await Promise.all([
   png(markBlackSvg, 1024),
   png(markWhiteSvg, 1024),
@@ -172,11 +151,13 @@ const [
   png(faviconSvg, 32),
   png(faviconSvg, 48),
   png(githubBadgePreviewSvg(), 400),
-  png(socialSvg(1200, 630, PAPER, INK), 1200, 630),
-  png(socialSvg(1600, 900, BLACK, WHITE), 1600, 900),
 ]);
 
-const socialPreview = await readFile(join(SOURCE_DIRECTORY, "shipbash-social-preview-1280x640.png"));
+const [socialPreview, openGraph, launchCover] = await Promise.all([
+  readFile(join(SOURCE_DIRECTORY, "shipbash-social-preview-1280x640.png")),
+  readFile(join(SOURCE_DIRECTORY, "shipbash-open-graph-1200x630.png")),
+  readFile(join(SOURCE_DIRECTORY, "shipbash-launch-cover-1600x900.png")),
+]);
 
 const faviconIco = ico([
   { size: 16, data: favicon16 },

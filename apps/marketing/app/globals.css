@@ -64,6 +64,19 @@ button { color: inherit; }
   transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease, color 150ms ease;
 }
 .login-link { padding: 11px 26px; font-size: 14px; }
+.nav-actions { display: flex; align-items: center; gap: 22px; }
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Sora, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 150ms ease;
+}
+.github-link svg { width: 22px; height: 22px; display: block; fill: currentColor; }
+.github-link:hover,
+.github-link:focus-visible { transform: rotate(-3deg) scale(1.06); outline: none; }
 .button-sketch:hover,
 .button-sketch:focus-visible {
   color: var(--ink);
@@ -225,6 +238,9 @@ button { color: inherit; }
   .wordmark svg { width: 30px; height: 30px; }
   .wordmark span { font-size: 17px; }
   .login-link { padding: 9px 18px; font-size: 13px; }
+  .nav-actions { gap: 16px; }
+  .github-link span { display: none; }
+  .github-link svg { width: 24px; height: 24px; }
   .hero-copy { padding: 0 20px; gap: 15px; }
   .hero-copy h1 { font-size: clamp(42px, 13vw, 64px); }
   .hero-copy p { max-width: 34ch; font-size: 16px; line-height: 1.5; }
