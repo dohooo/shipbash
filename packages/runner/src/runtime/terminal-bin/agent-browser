@@ -1,0 +1,6 @@
+#!/bin/sh
+# The agent's terminal finds this first on its PATH (terminal-lane.mjs): the
+# browser is the harness's, driven through the browser tools, where every step
+# is recorded.
+echo "agent-browser is not available in this terminal. The browser is driven through the browser tools, where every step is recorded." >&2
+exit 127

@@ -1,0 +1,69 @@
+/**
+ * A finished Suite run's evidence: for each walk, its browser recording and
+ * its diagnostic artifacts. Failures degrade honestly: every artifact that
+ * could not be kept leaves a warning, the run a count of them, and the
+ * verdict stays untouched.
+ */
+import { basename, relative, sep } from "node:path";
+
+import type { SuiteCaseRunReference } from "../dispatch-worker-types.ts";
+import type { AppendRunEventForJobInput } from "../store/job-store-inputs.ts";
+import { recordingWalkDirectory } from "../suite-recording-source.ts";
+import { UNMASKED_TERMINAL_LOG, unmaskedTerminalLog } from "../terminal-session-log.ts";
+import { artifactLoss, artifactsIncomplete, replayExportLoss } from "./announcements.ts";
+import { isContained } from "../contained-path.ts";
+import { artifactKind, prepareArtifactFiles } from "./artifact-files.ts";
+import { announceRecording, keepRecording } from "./recording.ts";
+import { type EvidenceFile, type EvidencePort, failureText, transferFiles } from "./transfer.ts";
+
+/**
+ * The exported replay goes on its own: it is the one file whose row the
+ * schema can refuse (kind `video`) and whose bytes the bucket can refuse
+ * (`video/mp4`), and that must cost one warning, never the walk's retention.
+ */
+async function retainReplayExport(port: EvidencePort, caseRunId: string, file: EvidenceFile): Promise<void> {
+  await transferFiles(port, [file]).catch(async (error: unknown) => {
+    await port.appendRunEventsForJob([
+      replayExportLoss(caseRunId, basename(file.path), { artifactId: null, detail: failureText(error) }),
+    ]);
+  });
+}
+
+/** Keeps one walk's artifacts; answers how many it lost. */
+async function retainCaseArtifacts(port: EvidencePort, reference: SuiteCaseRunReference, source: string): Promise<number> {
+  const { caseRunId } = reference;
+  const prepared = await prepareArtifactFiles(source);
+  const losses: AppendRunEventForJobInput[] = prepared.failures.map((failure) =>
+    artifactLoss(caseRunId, failure, { artifactId: null, detail: failure.message }));
+  const files: EvidenceFile[] = [];
+  const replays: EvidenceFile[] = [];
+  for (const path of prepared.files) {
+    if (!isContained(source, path)) throw new Error("Runtime artifact escaped its Case output directory.");
+    const file = { path, group: caseRunId, sourcePath: `verification/${reference.directory}/${relative(source, path).split(sep).join("/")}` };
+    const kind = artifactKind(path);
+    if (kind === "video") replays.push(file);
+    // A log its runner never masked is kept by no one.
+    else if (await unmaskedTerminalLog(source, path)) {
+      losses.push(artifactLoss(caseRunId, { kind, label: basename(path) }, { artifactId: null, detail: UNMASKED_TERMINAL_LOG }));
+    } else files.push(file);
+  }
+  if (losses.length > 0) await port.appendRunEventsForJob(losses);
+  const failures = files.length > 0 ? await transferFiles(port, files) : [];
+  for (const replay of replays) await retainReplayExport(port, caseRunId, replay);
+  return losses.length + failures.filter((failure) => failure !== null).length;
+}
+
+export async function retainSuiteEvidence(
+  port: EvidencePort,
+  input: { outputDirectory: string; caseRuns: ReadonlyArray<SuiteCaseRunReference> },
+): Promise<void> {
+  let unavailable = 0;
+  for (const reference of input.caseRuns) {
+    const source = await recordingWalkDirectory(input.outputDirectory, reference);
+    if (!source) continue;
+    const recording = await keepRecording(port, reference.caseRunId, source, { retryFailed: false, expected: false });
+    await announceRecording(port, reference.caseRunId, recording);
+    unavailable += await retainCaseArtifacts(port, reference, source);
+  }
+  if (unavailable > 0) await port.appendRunEventsForJob([artifactsIncomplete(unavailable)]);
+}

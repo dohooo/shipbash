@@ -1,0 +1,273 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "authState",
+    "summary",
+    "publicMarkdown",
+    "visitedUrls",
+    "proposals",
+    "auth"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "needs_attention",
+        "auth_required"
+      ]
+    },
+    "authState": {
+      "type": "string",
+      "enum": [
+        "authenticated",
+        "unauthenticated",
+        "unknown"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "publicMarkdown": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "visitedUrls": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "targetSuiteId",
+          "baseDefinitionRevision",
+          "proposedSuiteName",
+          "productThesis",
+          "candidateDefinition"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "create_suite",
+              "change_suite"
+            ]
+          },
+          "targetSuiteId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "baseDefinitionRevision": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "proposedSuiteName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 160
+          },
+          "productThesis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 600
+          },
+          "candidateDefinition": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "title",
+                "steps",
+                "category",
+                "checkpoints",
+                "preconditions",
+                "whyItMatters",
+                "enabled",
+                "archived",
+                "change"
+              ],
+              "properties": {
+                "id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 128
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "steps": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 40,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "category": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "checkpoints": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "goal",
+                      "afterStep"
+                    ],
+                    "properties": {
+                      "goal": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      },
+                      "afterStep": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 40
+                      }
+                    }
+                  }
+                },
+                "preconditions": {
+                  "type": "array",
+                  "maxItems": 10,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "whyItMatters": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 300
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "archived": {
+                  "type": "boolean"
+                },
+                "change": {
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "update",
+                    "archive",
+                    "unchanged"
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "journey",
+                    "before_all",
+                    "after_all",
+                    "before_each",
+                    "after_each"
+                  ]
+                },
+                "scopeCaseId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 128
+                },
+                "scopeCandidateIndex": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 199
+                },
+                "ownerConfirmation": {
+                  "type": "string",
+                  "enum": [
+                    "not_needed",
+                    "pending",
+                    "confirmed"
+                  ]
+                },
+                "repeat": {
+                  "type": "string",
+                  "enum": [
+                    "repeatable",
+                    "one_time"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "auth": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        }
+      ]
+    }
+  }
+}

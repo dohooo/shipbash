@@ -1,0 +1,103 @@
+/*
+ * ShipBash design tokens — Tailwind CSS v4 theme (CSS-first configuration).
+ *
+ * Preflight is intentionally NOT imported so Tailwind's base reset never
+ * fights the hand-written CSS; only the theme variables and on-demand
+ * utilities are available.
+ *
+ * Default Tailwind palettes/scales are disabled (`initial`) so that only the
+ * ShipBash tokens below generate utilities.
+ */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+/* The shadcn bridge must live in THIS compilation unit: its @theme tokens
+ * (border, muted-foreground, …) only produce utilities next to the utilities
+ * import above — as a separate stylesheet they never generated anything. */
+@import "./shadcn-bridge.css";
+
+@theme {
+  /* Colors — identical to the :root palette in globals.css. */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-bg: #f7f7f5;
+  --color-panel: #ffffff;
+  --color-ink: #171717;
+  --color-ink-hover: #2b2b2b;    /* hover state of ink-filled controls */
+  --color-muted: #686866;
+  --color-faint: #969691;
+  --color-line: #deded9;
+  --color-line-strong: #bdbdb6;
+  --color-soft: #edede9;
+  --color-green: #16a34a;
+  --color-green-soft: #edf9f0;
+  --color-green-line: #a8d9b6;  /* borders/marks on green-soft surfaces */
+  --color-green-tint: #fbfdfb;  /* faint green-cast card background */
+  --color-amber: #a16207;
+  --color-amber-soft: #fff8e6;
+  --color-amber-accent: #d69e2e; /* dots/badges on amber surfaces */
+  --color-amber-line: #e3c66f;   /* borders on amber surfaces */
+  --color-amber-muted: #ecd9a0;  /* subdued amber accents */
+  --color-amber-ink: #75540b;    /* readable text on amber-soft */
+  --color-red: #c62828;
+  --color-red-soft: #fff0f0;
+  --color-red-line: #efb3b3;     /* borders/marks on red-soft surfaces */
+  --color-blue: #2563eb;         /* informational accents */
+  --color-blue-soft: #eff6ff;    /* informational surfaces */
+  --color-blue-line: #bfdbfe;    /* borders on blue-soft surfaces */
+  --color-blue-deep: #1d4ed8;    /* readable text on blue-soft */
+
+  /* Neutral surfaces beyond the base palette. */
+  --color-panel-muted: #fafaf8;  /* hover rows, secondary panel fills */
+
+  /* Chrome-mock palette — deliberately mimics a real browser window; keep
+     separate from the app palette. */
+  --color-chrome-border: #c8c8c8;
+  --color-chrome-border-strong: #b8babd;
+  --color-chrome-face: #e7e8ea;
+  --color-chrome-face-deep: #d9dade;
+  --color-chrome-field: #f1f3f4;
+  --color-chrome-icon: #5f6368;
+  --color-chrome-ink: #45474a;
+  --color-chrome-frame: #101113;
+  --color-mac-red: #ff5f57;      /* mock window traffic lights */
+  --color-mac-amber: #febc2e;
+  --color-mac-green: #28c840;
+
+  /* Font stacks — the sans is --sans in globals.css; the mono is --mono, the
+     one monospace face, defined in contracts' terminal-theme.css. */
+  --font-*: initial;
+  --font-sans: "Avenir Next", Avenir, "Helvetica Neue", sans-serif;
+  --font-mono: var(--mono);
+
+  /* Type scale. */
+  --text-*: initial;
+  --text-xs: 10px;   /* mono status/meta labels, captions */
+  --text-sm: 11px;   /* secondary copy, list details */
+  --text-md: 12px;   /* dense body copy, compact chips */
+  --text-base: 14px; /* body (matches the body font-size) */
+  --text-lg: 16px;   /* section/card headings (h2) */
+  --text-xl: 18px;   /* prominent headings */
+  --text-2xl: 20px;  /* markdown h1, focal headings */
+  --text-3xl: 30px;  /* page hero titles, metric values */
+  --text-4xl: 42px;  /* oversized display accents */
+
+  /* Font weights. */
+  --font-weight-*: initial;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Corner radii. */
+  --radius-*: initial;
+  --radius-sm: 4px;  /* controls, chips, inputs, menus */
+  --radius-md: 8px;  /* cards, mock windows */
+  --radius-lg: 12px; /* large surfaces */
+  --radius-full: 999px;
+}
+
+/*
+ * The palette is fully tokenized: globals.css contains no color literals
+ * except #fff/#000, which stay literal by design.
+ */

@@ -1,0 +1,47 @@
+{
+  "name": "shipbash",
+  "version": "0.0.15",
+  "description": "The ShipBash command line: manage the journeys and hooks ShipBash tests your web app or CLI with, run them, read the results and pull evidence, from a terminal or a coding agent.",
+  "keywords": [
+    "shipbash",
+    "cli",
+    "qa",
+    "testing",
+    "e2e",
+    "end-to-end",
+    "user-journeys",
+    "ai-agent",
+    "coding-agent",
+    "agent-skills"
+  ],
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "shipbash": "dist/shipbash.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=23.5.0 || ^22.13.0 || ^20.17.0"
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dohooo/shipbash.git",
+    "directory": "packages/cli"
+  },
+  "devDependencies": {
+    "@inquirer/prompts": "^8.5.2",
+    "@types/node": "^24.0.0",
+    "@vercel/detect-agent": "^1.2.5",
+    "fflate": "0.8.3",
+    "typescript": "5.9.3",
+    "vite": "^7.3.6"
+  }
+}

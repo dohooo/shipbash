@@ -1,0 +1,11 @@
+export declare const MAX_RECORDING_CUES: number;
+export declare const MAX_RECORDING_POINTERS: number;
+export declare const MAX_RECORDING_ATTENTION_POINTS: number;
+export declare const MAX_RECORDING_TERMINAL_SESSIONS: number;
+export declare const MAX_RECORDING_SPEED_SEGMENTS: number;
+export declare const MAX_RECORDING_ANCHORS: number;
+export declare const MAX_RECORDING_CAPTION_LENGTH: number;
+export declare const MAX_RECORDING_CHAPTER_LENGTH: number;
+export declare const MAX_RECORDING_TRACK_TEXT_LENGTH: number;
+export declare const RECORDING_FRAME_RATE: number;
+export declare const POINTER_LEAD_MS: number;

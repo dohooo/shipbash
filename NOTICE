@@ -1,0 +1,142 @@
+ShipBash
+Copyright 2026 Caspian Zhao
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository includes the third-party material listed below. Each item
+stays under its own license.
+
+-------------------------------------------------------------------------------
+Moby seccomp profile (Apache License 2.0)
+-------------------------------------------------------------------------------
+packages/runner/src/runtime/chromium-auth-seccomp.json is Moby's default
+seccomp profile (https://github.com/moby/moby, profiles/seccomp/default.json)
+with additions that let Chromium create user namespaces.
+
+Docker
+Copyright 2012-2017 Docker, Inc.
+
+This product includes software developed at Docker, Inc. (https://www.docker.com).
+
+-------------------------------------------------------------------------------
+wterm (Apache License 2.0)
+-------------------------------------------------------------------------------
+apps/console/public/wterm.wasm is copied unchanged from @wterm/core
+(https://github.com/vercel-labs/wterm).
+
+Copyright 2025 Vercel, Inc.
+
+-------------------------------------------------------------------------------
+AI Elements (Apache License 2.0)
+-------------------------------------------------------------------------------
+apps/console/components/ai-elements/ is derived from AI Elements
+(https://github.com/vercel/ai-elements).
+
+Copyright 2023 Vercel, Inc.
+
+-------------------------------------------------------------------------------
+shadcn/ui (MIT License)
+-------------------------------------------------------------------------------
+apps/console/components/ui/ is derived from shadcn/ui
+(https://github.com/shadcn-ui/ui).
+
+MIT License
+
+Copyright (c) 2023 shadcn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+open-browser-use (MIT License)
+-------------------------------------------------------------------------------
+The agent cursor's motion engine and arrow asset in
+apps/console/app/_components/agent-cursor-*.ts are adapted from
+content-cursor.js in open-browser-use
+(https://github.com/iFurySt/open-browser-use) at commit 07a8014.
+
+MIT License
+
+Copyright (c) 2026 Leo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+Lobe Icons (MIT License)
+-------------------------------------------------------------------------------
+apps/console/public/apple.svg, github.svg and google-color.svg, and
+apps/marketing/public/agents/*.svg come from Lobe Icons
+(https://github.com/lobehub/lobe-icons).
+
+MIT License
+
+Copyright (c) 2023 LobeHub
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+Fonts (SIL Open Font License 1.1)
+-------------------------------------------------------------------------------
+Each directory that holds a font file also holds its license as OFL.txt.
+
+- Inter, Copyright (c) 2016 The Inter Project Authors:
+  packages/contracts/src/runtime/recording-overlay-fonts/
+- JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors:
+  packages/contracts/src/runtime/terminal-theme/
+- Sora, Copyright 2019 The Sora Project Authors: apps/console/assets/. The
+  lockup SVGs in brand/exports/ and apps/*/public/shipbash-brand/ also embed
+  Sora.
+
+-------------------------------------------------------------------------------
+Trademarks
+-------------------------------------------------------------------------------
+Apple, Claude Code, Codex, Cursor, GitHub, Google and Slack are trademarks of
+their respective owners. Their logos appear here only to identify their
+products and services.

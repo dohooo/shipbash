@@ -1,0 +1,173 @@
+/* /cli/authorize — the right column's delta on the login chassis. Everything
+   structural comes from ../../login/login.module.css unchanged; these rules
+   only add the code, the facts, the deny affordance, the wait state and the
+   code field, on --login-* tokens so the dark theme and reduced motion hold. */
+
+/* The one thing on the page that has to be compared, so the only type that
+   competes with the title. Never selectable-as-a-favour, never copyable. */
+.pairCode {
+	display: flex;
+	align-items: baseline;
+	gap: 16px;
+	margin: 0;
+	color: var(--login-ink);
+	font: 700 var(--text-4xl) / 1 var(--mono);
+	letter-spacing: 0.14em;
+	white-space: nowrap;
+}
+.pairCode.sm {
+	font-size: var(--text-3xl);
+}
+.description code {
+	font: 600 0.88em / 1 var(--mono);
+}
+@media (max-width: 1000px) {
+	.pairCode {
+		font-size: var(--text-3xl);
+	}
+	.pairCode.sm {
+		font-size: var(--text-2xl);
+	}
+}
+
+/* The request as facts in the code's own typeface: client and device, then the
+   one condition under which any of it should be approved. */
+.pairFacts {
+	margin: 0;
+	color: var(--login-subtle);
+	font: 500 var(--text-base) / 1.9 var(--mono);
+}
+.pairFacts b {
+	color: var(--login-ink);
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+/* Whose account the token lands on, and the way out of it: below the buttons,
+   because it is not part of the decision. */
+.pairAccount {
+	margin: 0;
+	color: var(--login-subtle);
+	font: 500 var(--text-md) / 1.6 var(--mono);
+}
+.pairAccount a,
+.pairAccount button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--login-ink);
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	white-space: nowrap;
+}
+
+.pairRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.pairDeny {
+	min-height: 54px;
+	padding: 17px 18px;
+	border: 0;
+	background: none;
+	color: var(--login-subtle);
+	cursor: pointer;
+	font-family: Sora, Helvetica, sans-serif;
+	font-size: var(--text-lg);
+	font-weight: 700;
+	line-height: 1;
+}
+.pairDeny:hover {
+	color: var(--login-ink);
+}
+.pairDeny:focus-visible {
+	outline: 2px solid var(--login-ink);
+	outline-offset: 5px;
+}
+
+/* Secondary, not faint: the revoke route takes --login-subtle, never lighter. */
+.pairFine {
+	max-width: 44ch;
+	margin: 0;
+	color: var(--login-subtle);
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: var(--text-base);
+	line-height: 1.6;
+}
+.pairFine code {
+	font: 600 0.9em / 1 var(--mono);
+}
+
+.pairWait {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--login-subtle);
+	font-family: Sora, Helvetica, sans-serif;
+	font-size: var(--text-base);
+	font-weight: 600;
+}
+.pairWait::before {
+	content: "";
+	width: 13px;
+	height: 13px;
+	border: 2px solid color-mix(in srgb, var(--login-ink) 20%, transparent);
+	border-top-color: var(--login-ink);
+	border-radius: var(--radius-full);
+	animation: pair-spin 0.8s linear infinite;
+}
+@keyframes pair-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.pairInput {
+	font-family: var(--mono);
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+}
+.pairInput::placeholder {
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+	.pairCode {
+		justify-content: center;
+		letter-spacing: 0.12em;
+	}
+	.pairFine {
+		text-align: center;
+	}
+	.pairFacts {
+		line-height: 1.75;
+		text-align: center;
+	}
+	.pairAccount {
+		text-align: center;
+	}
+	/* Approve takes the column's width, and Deny sits under it. */
+	.pairRow {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 4px;
+	}
+	.pairRow > :not(.pairDeny) {
+		width: 100%;
+	}
+	.pairDeny {
+		min-height: 44px;
+		padding: 12px 18px;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.pairWait::before {
+		animation-duration: 2.4s;
+	}
+}

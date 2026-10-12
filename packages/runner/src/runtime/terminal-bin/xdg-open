@@ -1,0 +1,17 @@
+#!/bin/sh
+# The agent's terminal finds this first on its PATH, and BROWSER names it
+# (terminal-shell.mjs): a URL a program opens goes to the run's browser, in a
+# new tab, where the walk is recorded. It is spooled here, one URL per file
+# (written under a dot name, then renamed, so the lane never reads half of
+# one), and the terminal lane opens it. A web page opens, and a local file
+# only when a browser is what a real xdg-open would hand it to: an HTML page,
+# by file:// URL or absolute path. The browser is recorded as pixels no text
+# masking reaches, so a config file, a sign-in or a directory never opens.
+case "$1" in
+  http://*|https://*) ;;
+  file://*.html|file://*.htm|file://*.HTML|file://*.HTM|/*.html|/*.htm|/*.HTML|/*.HTM) ;;
+  *) echo "xdg-open: no application here opens this; only a web page or a local .html file opens, in the run's browser." >&2; exit 3 ;;
+esac
+name="$(date +%s%N)-$$"
+printf '%s\n' "$1" > "${SHIPBASH_TERMINAL_OPEN_DIRECTORY:?}/.$name" \
+  && mv "$SHIPBASH_TERMINAL_OPEN_DIRECTORY/.$name" "$SHIPBASH_TERMINAL_OPEN_DIRECTORY/$name.url"

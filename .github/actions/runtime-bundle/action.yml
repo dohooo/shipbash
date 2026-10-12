@@ -1,0 +1,36 @@
+name: Runner runtime bundle
+description: >-
+  Builds the runner runtime bundle (runtime-bundle.tar.gz in the workspace)
+  and uploads the Sandbox smoke's payload, that bundle with the browser probe
+  and the smoke's runner, as the sandbox-smoke artifact. The release's
+  runtime-bundle job and the on-demand smoke both build it here.
+inputs:
+  version:
+    description: The bundle's version, the directory it unpacks to.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+    - uses: actions/cache@v6
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+        restore-keys: bun-${{ runner.os }}-
+    - run: bun ci --ignore-scripts
+      shell: bash
+    - run: bun run build:packages
+      shell: bash
+    - name: Build the bundle and the smoke's payload
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        node scripts/build-runtime-bundle.mjs "$VERSION" runtime-bundle.tar.gz
+        node scripts/sandbox/build-payload.mjs runtime-bundle.tar.gz sandbox-smoke
+    - uses: actions/upload-artifact@v7
+      with:
+        name: sandbox-smoke
+        path: sandbox-smoke
+        if-no-files-found: error
+        retention-days: 1

@@ -1,0 +1,41 @@
+{
+  "name": "@shipbash/runner",
+  "version": "0.81.3",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true}); require('node:fs').cpSync('src/runtime','dist/runtime',{recursive:true})\"",
+    "typecheck": "node --check src/runtime/activity-runner.mjs && node --check src/runtime/suite-runner.mjs && node --check src/runtime/vercel-dispatch-runner.mjs"
+  },
+  "exports": {
+    "./runtime/assets.mjs": {
+      "types": "./src/runtime/assets.d.mts",
+      "development": "./src/runtime/assets.mjs",
+      "default": "./dist/runtime/assets.mjs"
+    },
+    "./runtime/trusted-access.mjs": {
+      "types": "./src/runtime/trusted-access.d.mts",
+      "development": "./src/runtime/trusted-access.mjs",
+      "default": "./dist/runtime/trusted-access.mjs"
+    },
+    "./runtime/*": {
+      "types": "./src/runtime/*",
+      "development": "./src/runtime/*",
+      "default": "./dist/runtime/*"
+    }
+  },
+  "files": [
+    "dist/",
+    "Dockerfile"
+  ],
+  "dependencies": {
+    "@earendil-works/pi-mcp": "1.0.1",
+    "@secretlint/core": "13.0.5",
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.5",
+    "@shipbash/contracts": "workspace:*",
+    "@wterm/core": "0.3.4",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {}
+}

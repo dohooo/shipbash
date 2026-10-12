@@ -1,0 +1,13 @@
+{
+  "emoji": false,
+  "group": false,
+  "capitalize": true,
+  "contributors": true,
+  "types": {
+    "feat": { "title": "Features" },
+    "fix": { "title": "Bug Fixes" },
+    "perf": { "title": "Performance" },
+    "docs": { "title": "Documentation" }
+  },
+  "titles": { "breakingChanges": "Breaking Changes" }
+}

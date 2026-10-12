@@ -1,0 +1,123 @@
+name: sandbox-browser-smoke
+
+# The runner's browser in a real Vercel Sandbox, as production runs it
+# (scripts/sandbox-browser-smoke.ts): a Sandbox from a runner image, the
+# runtime bundle installed where a task installs one, and the browser
+# launched as every lane launches one, one agent-browser command and the
+# desktop probe, run as the runner child runs (uid 10001, the child
+# environment). A Sandbox is not a container: it runs Chromium with its own
+# sandbox on, reads none of the image's ENV, and cold-starts slower than
+# local Docker.
+#
+# The payload, the bundle with the probe and the smoke's runner, is the
+# sandbox-smoke artifact the runtime-bundle action builds (.github/actions):
+# from release.yml, its runtime-bundle job's, the bundle production will run,
+# with the image production will run (the one just built, or the one it runs
+# now); on demand, the payload job's, for a ref, with the image production
+# runs. The sandbox job only downloads it and runs it.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The ref whose runtime bundle to test.
+        required: true
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      image:
+        description: The image to test; empty is the one production runs now.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sandbox-browser-smoke-${{ inputs.ref }}
+  cancel-in-progress: false
+
+env:
+  # The deployment's Vercel team and console project: repository variables.
+  VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
+  VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT }}
+  IMAGE_REPOSITORY: vcr.vercel.com/${{ vars.VERCEL_SCOPE }}/${{ vars.VERCEL_PROJECT }}/shipbash-runner
+  VERCEL_CLI: vercel@56
+
+jobs:
+  payload:
+    name: Payload
+    # On demand only: a release builds its own in its runtime-bundle job.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/runtime-bundle
+        with:
+          version: sandbox-smoke-${{ github.run_id }}
+
+  sandbox:
+    name: Browser in a Sandbox
+    needs: payload
+    if: ${{ !cancelled() && needs.payload.result != 'failure' }}
+    runs-on: ubuntu-latest
+    # The script waits up to 21 min for the image to become sandbox-ready and
+    # the Sandbox lives at most 10 min; this leaves room for the delete after.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          # The runner-image tag names the commit production's image was built from.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: sandbox-smoke
+          path: sandbox-smoke
+
+      - name: Link the project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo "::error::VERCEL_TOKEN is not available to this workflow."; exit 1; }
+          npx --yes "${VERCEL_CLI}" link --yes --project "${VERCEL_PROJECT}" --scope "${VERCEL_SCOPE}" --token "$VERCEL_TOKEN"
+
+      - name: Find the image production runs
+        if: ${{ inputs.image == '' }}
+        # Production's SHIPBASH_RUNNER_IMAGE is a sensitive variable no pull
+        # can read. The image is the one runner-image.yml built from the commit
+        # the runner-image tag marks, tagged <version>-<short sha>.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          baseline=$(git rev-parse -q --verify 'refs/tags/runner-image^{commit}') || { echo "::error::No runner-image tag names production's image."; exit 1; }
+          version=$(git show "${baseline}:package.json" | node -p "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")
+          tag=$(npx --yes "${VERCEL_CLI}" vcr tag ls shipbash-runner --format json --project "${VERCEL_PROJECT}" --scope "${VERCEL_SCOPE}" --token "$VERCEL_TOKEN" \
+            | node -e "const tags = JSON.parse(require('node:fs').readFileSync(0, 'utf8')).tags.map((entry) => entry.tag); \
+                const found = tags.find((tag) => tag.startsWith('${version}-') && '${baseline}'.startsWith(tag.slice('${version}-'.length))); \
+                if (!found) process.exit(1); console.log(found);") \
+            || { echo "::error::No registry tag ${version}-<sha> for ${baseline}."; exit 1; }
+          echo "PRODUCTION_IMAGE=${IMAGE_REPOSITORY}:${tag}" >> "$GITHUB_ENV"
+
+      - name: Run it in a Sandbox
+        # The Sandbox SDK's credentials are set here alone: the Vercel CLI
+        # refuses a project id without an org id in its environment.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          IMAGE: ${{ inputs.image }}
+        run: |
+          image="${IMAGE:-$PRODUCTION_IMAGE}"
+          test -n "$image" || { echo "::error::No runner image to test."; exit 1; }
+          node sandbox-smoke/sandbox-browser-smoke.mjs --image "$image" --payload sandbox-smoke

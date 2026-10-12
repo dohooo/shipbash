@@ -1,0 +1,26 @@
+# The agent's shell reads this in place of ~/.bashrc (terminal-lane.mjs), after
+# /etc/bash.bashrc, which Debian's bash reads unless it is started with
+# --norc. It reads ~/.bashrc first, as every interactive terminal does:
+# installers (rustup, bun, nvm) and a Journey's hooks put their PATH and
+# environment there, and each case attempt opens a new session. Then the
+# lane's prompt, `agent@sandbox:~/work$` with the path in color, which either
+# bashrc would otherwise overwrite.
+if [ -f ~/.bashrc ]; then . ~/.bashrc; fi
+PS1='\[\e[36m\]agent@sandbox\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
+# Then the shell marks each command's bounds with OSC 133, the FinalTerm
+# convention VS Code, kitty and Ghostty write: A where a prompt starts, B
+# where it ends, C once a command has been read and starts running (PS0), and
+# D with the exit status of the command that ended, drawn with the next
+# prompt: bash restores $? after PROMPT_COMMAND runs, so the prompt's is the
+# command's. The lane reads C and D (terminal-command.mjs); no screen draws
+# them. Before each prompt, the first included, an entry of PROMPT_COMMAND's
+# own puts the marks in place where something replaced PS0 or PS1, such as a
+# `source ~/.bashrc` that sets its own prompt. It is the array's last entry
+# (bash 5.1 and later run each one; the image's is 5.2), so an assignment to
+# PROMPT_COMMAND, which sets the first, leaves it there, as does a hook
+# prepended to it.
+__shipbash_marks() {
+  [[ $PS0 == *'133;C'* ]] || PS0+='\e]133;C\a'
+  [[ $PS1 == *'133;D'* ]] || PS1='\[\e]133;D;$?\a\e]133;A\a\]'"$PS1"'\[\e]133;B\a\]'
+}
+PROMPT_COMMAND+=(__shipbash_marks)

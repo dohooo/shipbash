@@ -1,0 +1,59 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["passed", "failed", "blocked", "error", "auth_required"]
+    },
+    "authState": {
+      "type": "string",
+      "enum": ["authenticated", "unauthenticated", "unknown"]
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "failureReason": {
+      "type": ["string", "null"],
+      "maxLength": 2000
+    },
+    "keyActions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      },
+      "maxItems": 30
+    },
+    "checklist": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "passed", "failed", "blocked", "not_run"]
+          },
+          "reason": {
+            "type": ["string", "null"],
+            "maxLength": 300
+          }
+        },
+        "required": ["id", "goal", "status", "reason"]
+      }
+    }
+  },
+  "required": ["outcome", "authState", "summary", "failureReason", "keyActions", "checklist"]
+}

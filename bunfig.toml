@@ -1,0 +1,6 @@
+[install]
+# Packages sit where npm put them, flat under the root node_modules:
+# scripts/build-runtime-bundle.mjs and the runner Dockerfile copy them from
+# there by name, which the isolated layout (Bun's default for workspaces)
+# does not provide.
+linker = "hoisted"

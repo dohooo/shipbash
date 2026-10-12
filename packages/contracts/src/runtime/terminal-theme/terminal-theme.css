@@ -1,0 +1,67 @@
+/* The terminal's skin, and the one monospace face, in one place: the console
+   imports this sheet, and the runner's replay export loads it into the
+   headless page it renders shell segments with (terminal-theme-files.mjs),
+   both over @wterm/dom's own terminal.css. The panel and the exported video
+   therefore draw every glyph, colour and cell alike; neither may restyle the
+   theme on its own.
+
+   The face is JetBrains Mono NL (SIL Open Font License, OFL.txt beside it),
+   built by scripts/build-terminal-fonts.ts: the cut without programming
+   ligatures, every character kept. `--mono` is the console's monospace
+   everywhere, defined here and nowhere else. A character the face lacks
+   (braille, CJK) falls back to the system's own monospace.
+
+   Colors 3–6 and 13–14 are not taken from a reference palette; they are
+   desaturated to sit beside the theme's green/red.
+
+   The box around the grid is part of the skin. Its top and bottom margins
+   are borders, not padding: padding lies inside the scroller, where a
+   scrollback line would show through above the screen's first row; a border
+   stays outside it, so exactly the grid's rows show. Where the box sits and
+   how it is scaled is each surface's own. */
+@font-face {
+  font-family: "JetBrains Mono NL";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./JetBrainsMonoNL-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "JetBrains Mono NL";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./JetBrainsMonoNL-Bold.ttf") format("truetype");
+}
+:root {
+  --mono: "JetBrains Mono NL", monospace;
+}
+.wterm.theme-shipbash {
+  padding: 0 13px;
+  border-block: 10px solid var(--term-bg);
+  border-radius: 0;
+  box-shadow: none;
+  --term-bg: #1b1b19;
+  --term-fg: #c9c9c1;
+  --term-cursor: #e7e7e0;
+  --term-color-0: #252522;
+  --term-color-1: #c96b5f;
+  --term-color-2: #8fbc8f;
+  --term-color-3: #c9b98f;
+  --term-color-4: #8fa5bc;
+  --term-color-5: #b09fbc;
+  --term-color-6: #8fbcb4;
+  --term-color-7: #c9c9c1;
+  --term-color-8: #6f6f68;
+  --term-color-9: #c96b5f;
+  --term-color-10: #8fbc8f;
+  --term-color-11: #c9b98f;
+  --term-color-12: #8fa5bc;
+  --term-color-13: #b09fbc;
+  --term-color-14: #8fbcb4;
+  --term-color-15: #f2f2ec;
+  --term-font-family: var(--mono);
+  --term-font-size: 12px;
+  --term-line-height: 1.8;
+  --term-row-height: 21.6px;
+}

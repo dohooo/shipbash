@@ -1,0 +1,26 @@
+/* /slack/connect — the right column's delta on the login chassis. Everything
+   structural comes from ../../login/login.module.css unchanged; this adds only
+   the account line under the button, on --login-* tokens so the dark theme
+   holds. */
+
+/* Which ShipBash account the Slack user signs in as, and the way to another:
+   below the button, because it is not part of the decision. */
+.account {
+	margin: 0;
+	color: var(--login-subtle);
+	font: 500 13px / 1.6 var(--mono);
+}
+.account form {
+	display: inline;
+}
+.account button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--login-ink);
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	white-space: nowrap;
+}

@@ -1,0 +1,264 @@
+name: Release
+
+# A pushed v* tag is a release; a merge to main is not. `bun run release
+# <patch|minor|major>` bumps the root version and pushes the tag, and this
+# runs, in order: the gates, the production database migration, the runner
+# runtime bundle (the code every project's Sandboxes install on their next
+# run), the runner image when its inputs changed since the previous tag, a
+# browser smoke in a real Sandbox from that image and bundle, the console deploy
+# (Vercel's own Git deploys, previews included, are off in both vercel.json files), the marketing site
+# when it changed, a smoke check, and last the GitHub Release: a "Shipped"
+# table over changelogithub's notes from the conventional commits since the
+# previous tag (changelogithub.config.json). No Release page means nothing
+# went out.
+#
+# What the release reads, here and in the workflows it calls. Repository
+# variables: VERCEL_SCOPE and VERCEL_TEAM_ID (the Vercel team's slug and id),
+# VERCEL_PROJECT and VERCEL_PROJECT_ID (the console project's name and id),
+# VERCEL_MARKETING_PROJECT_ID (the marketing project's id) and
+# SHIPBASH_PUBLIC_URL (the console's public origin, for the smoke check).
+# Repository secrets: VERCEL_TOKEN and POSTGRES_URL_NON_POOLING (the
+# production database's direct connection, for the migration).
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# The deployment's Vercel team and console project: repository variables.
+env:
+  VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
+  VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT }}
+
+jobs:
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      previous-tag: ${{ steps.diff.outputs.previous-tag }}
+      runner-image: ${{ steps.diff.outputs.runner-image }}
+      marketing: ${{ steps.diff.outputs.marketing }}
+      migrations: ${{ steps.diff.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: diff
+        # Migrations and the marketing site are measured against the newest
+        # v* tag that shipped: one with a GitHub Release, which only the last
+        # job of a successful run publishes, so a release that failed midway
+        # never hides its changes from the next. The image is measured
+        # against the `runner-image` tag runner-image.yml moves onto the
+        # commit production's image was built from. No shipped release, or no
+        # image tag, counts everything as changed.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          shipped=$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            | grep -oE '"tag_name": *"v[^"]+"' | grep -oE 'v[0-9][^"]*' || true)
+          previous=$(git tag --list 'v*' --sort=-v:refname --merged HEAD | grep -vx "${GITHUB_REF_NAME}" \
+            | grep -Fx -f <(printf '%s\n' "$shipped") | head -1 || true)
+          echo "previous-tag=${previous}" >> "$GITHUB_OUTPUT"
+          image_baseline=$(git rev-parse -q --verify refs/tags/runner-image^{commit} || true)
+          if [ -z "$image_baseline" ]; then
+            echo "runner-image=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$image_baseline" HEAD | grep -qE '^(\.dockerignore|packages/runner/Dockerfile|packages/runner/scripts/|packages/runner/src/runtime/novnc-|packages/runner/src/runtime/pi-smoke\.mjs|packages/runner/src/runtime/codex-config\.mjs|packages/contracts/src/runtime/agent-model\.mjs|\.github/workflows/runner-image\.yml)'; then
+            echo "runner-image=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "runner-image=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -z "$previous" ]; then
+            echo "marketing=true" >> "$GITHUB_OUTPUT"
+            echo "migrations=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$previous" HEAD)
+          # The release commit bumps the version in package.json and the lock
+          # file; a diff that only touched those lines is not a build input.
+          for manifest in package.json bun.lock; do
+            if printf '%s\n' "$changed" | grep -qx "$manifest" \
+              && ! git diff "$previous" HEAD -- "$manifest" | grep -E '^[+-] ' | grep -vqE '"version": '; then
+              changed=$(printf '%s\n' "$changed" | grep -vx "$manifest")
+            fi
+          done
+          if printf '%s\n' "$changed" | grep -qE '^(apps/marketing/|package\.json|bun\.lock|bunfig\.toml)'; then
+            echo "marketing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "marketing=false" >> "$GITHUB_OUTPUT"
+          fi
+          migrations=$(printf '%s\n' "$changed" | grep -E '^supabase/migrations/.*\.sql$' | sed 's|^supabase/migrations/||' | tr '\n' ' ')
+          echo "migrations=${migrations}" >> "$GITHUB_OUTPUT"
+
+  gates:
+    name: Gates
+    uses: ./.github/workflows/gates.yml
+    secrets: inherit
+
+  migrate:
+    name: Migrate production database
+    needs: [changes, gates]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Apply supabase/migrations to production
+        # The connection Supabase's Vercel integration names
+        # POSTGRES_URL_NON_POOLING: migrations need a session, which the
+        # transaction pooler behind POSTGRES_URL does not keep.
+        env:
+          DATABASE_URL: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::POSTGRES_URL_NON_POOLING is not set. Set it with: gh secret set POSTGRES_URL_NON_POOLING"
+            exit 1
+          fi
+          # The CLI version the repo pins (package.json), whichever field holds it.
+          SUPABASE=$(node -p "const p=require('./package.json'); ['dependencies','devDependencies','optionalDependencies'].map((k)=>p[k]?.supabase).find(Boolean)")
+          test "$SUPABASE" != "undefined" || { echo "package.json no longer pins supabase"; exit 1; }
+          npx --yes "supabase@${SUPABASE}" db push --db-url "$DATABASE_URL" --dry-run
+          npx --yes "supabase@${SUPABASE}" db push --db-url "$DATABASE_URL" --yes
+
+  runtime-bundle:
+    name: Runner runtime
+    needs: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.upload.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # The bundle, and the Sandbox smoke's payload built from it (the sandbox-smoke artifact).
+      - uses: ./.github/actions/runtime-bundle
+        with:
+          version: ${{ github.ref_name }}
+      - name: Upload the bundle to the private Blob store and point production at it
+        id: upload
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel() { npx --yes vercel@56 "$@" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"; }
+          vercel link --yes --project "$VERCEL_PROJECT"
+          vercel env pull .env.release --environment production --yes
+          BLOB_READ_WRITE_TOKEN=$(grep -E '^BLOB_READ_WRITE_TOKEN=' .env.release | cut -d= -f2- | tr -d '"')
+          rm -f .env.release
+          test -n "$BLOB_READ_WRITE_TOKEN" || { echo "::error::BLOB_READ_WRITE_TOKEN is not on the ${VERCEL_PROJECT} project."; exit 1; }
+          url=$(BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" npx --yes vercel@56 blob put runtime-bundle.tar.gz             --access private --pathname "runner/runtime-${GITHUB_REF_NAME}.tar.gz" --allow-overwrite true             --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" 2>&1 | sed -E 's/\x1b\[[0-9;]*m//g' | grep -oE 'https://[^[:space:]]+[.]tar[.]gz' | head -1)
+          test -n "$url" || { echo "::error::The blob upload printed no URL."; exit 1; }
+          for pair in "SHIPBASH_RUNNER_RUNTIME_VERSION=${GITHUB_REF_NAME}" "SHIPBASH_RUNNER_RUNTIME_URL=${url}"; do
+            name="${pair%%=*}"; value="${pair#*=}"
+            vercel env rm "$name" production --yes || true
+            printf '%s' "$value" | vercel env add "$name" production
+          done
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+  runner-image:
+    name: Runner image
+    needs: [changes, migrate]
+    if: ${{ !cancelled() && needs.migrate.result == 'success' && needs.changes.outputs.runner-image == 'true' }}
+    uses: ./.github/workflows/runner-image.yml
+    secrets: inherit
+
+  sandbox-smoke:
+    name: Browser in a Sandbox
+    # The image production will run with the release's runtime, before the
+    # console deploy points production at them: the browser launched in a
+    # real Sandbox (not a container, its own ENV unread) and one command.
+    needs: [runtime-bundle, runner-image]
+    if: ${{ !cancelled() && needs.runtime-bundle.result == 'success' && (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped') }}
+    uses: ./.github/workflows/sandbox-browser-smoke.yml
+    with:
+      ref: ${{ github.ref_name }}
+      image: ${{ needs.runner-image.outputs.image }}
+    secrets: inherit
+
+  deploy-console:
+    name: Deploy console
+    needs: [migrate, runtime-bundle, runner-image, sandbox-smoke]
+    # After the runtime bundle, when it was rebuilt the image, and the Sandbox
+    # smoke of both; never after a failure.
+    if: ${{ !cancelled() && needs.migrate.result == 'success' && needs.runtime-bundle.result == 'success' && (needs.runner-image.result == 'success' || needs.runner-image.result == 'skipped') && needs.sandbox-smoke.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy the console
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx --yes vercel@56 link --yes --project "$VERCEL_PROJECT" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+          npx --yes vercel@56 deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+  deploy-marketing:
+    name: Deploy marketing site
+    needs: [changes, gates]
+    if: ${{ !cancelled() && needs.gates.result == 'success' && needs.changes.outputs.marketing == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy the shipbash project
+        # The project's Root Directory setting is apps/marketing, so the
+        # upload is the repository and the project is named by id — a link
+        # file at the root would collide with the console's.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_MARKETING_PROJECT_ID }}
+        run: npx --yes vercel@56 deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+
+  smoke:
+    name: Smoke
+    needs: deploy-console
+    # success() would also look past deploy-console at the skipped image job;
+    # only the deploy's own result matters here.
+    if: ${{ !cancelled() && needs.deploy-console.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The console answers
+        env:
+          SHIPBASH_PUBLIC_URL: ${{ vars.SHIPBASH_PUBLIC_URL }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "${SHIPBASH_PUBLIC_URL}/login")
+          echo "GET /login -> $code"
+          [ "$code" = "200" ]
+
+  github-release:
+    name: GitHub Release
+    needs: [changes, runtime-bundle, runner-image, deploy-marketing, smoke]
+    # Only after everything that ran succeeded; a skipped image or marketing
+    # job is fine, a failed one is not.
+    if: ${{ !cancelled() && needs.smoke.result == 'success' && needs.runner-image.result != 'failure' && needs.deploy-marketing.result != 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Write the notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ needs.changes.outputs.previous-tag }}
+          MIGRATIONS: ${{ needs.changes.outputs.migrations }}
+          MARKETING: ${{ needs.deploy-marketing.result }}
+          RUNNER_IMAGE: ${{ needs.runner-image.outputs.image }}
+          RUNNER_RUNTIME: ${{ needs.runtime-bundle.outputs.version }}
+        # The range is explicit: left to itself, changelogithub reads every
+        # tag on HEAD as the current ref, and the moving runner-image tag
+        # shares this commit whenever the image was rebuilt.
+        run: |
+          npx --yes changelogithub@15 --to "$GITHUB_REF_NAME" ${PREVIOUS_TAG:+--from "$PREVIOUS_TAG"}
+          gh release view "$GITHUB_REF_NAME" --json body --jq .body > /tmp/changelog.md
+          node scripts/release-notes.mjs > /tmp/shipped.md
+          cat /tmp/shipped.md /tmp/changelog.md > /tmp/notes.md
+          gh release edit "$GITHUB_REF_NAME" --notes-file /tmp/notes.md

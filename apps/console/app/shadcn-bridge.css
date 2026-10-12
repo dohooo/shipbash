@@ -1,0 +1,61 @@
+/* Streamdown ships Tailwind classes inside its dist bundle, but this
+ * Next/turbopack build ignores @source registrations entirely (verified:
+ * an @source pointing at a local file produced nothing either),
+ * so those utilities can never be generated here. The code-block chrome is
+ * styled by hand in globals.css through Streamdown's stable data-streamdown
+ * attributes instead. */
+
+/*
+ * shadcn / AI Elements semantic tokens bridged onto ShipBash design tokens.
+ *
+ * The copied components (components/ui, components/ai-elements) consume the
+ * shadcn variable vocabulary (--background, --muted-foreground, …). This file
+ * maps that vocabulary onto app/theme.css tokens so the components inherit the
+ * ShipBash look without touching the canonical theme.
+ *
+ * Deliberately NOT remapped:
+ *  - --color-muted (ShipBash token = body text gray; shadcn muted = soft
+ *    surface). The only bg-muted usages are dark-mode variants and an unused
+ *    button-group part, so no visible surface depends on it.
+ *  - --radius-* / --text-* / --font-* — the components pick up the ShipBash
+ *    scales directly, which is the point.
+ */
+:root {
+  --background: var(--color-bg);
+  --foreground: var(--color-ink);
+  --muted-foreground: var(--color-muted);
+  --primary: var(--color-ink);
+  --primary-foreground: #fff;
+  --secondary: var(--color-soft);
+  --secondary-foreground: var(--color-ink);
+  --accent: var(--color-soft);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-red);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-line-strong);
+  --popover: var(--color-panel);
+  --popover-foreground: var(--color-ink);
+  --card: var(--color-panel);
+  --card-foreground: var(--color-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+}

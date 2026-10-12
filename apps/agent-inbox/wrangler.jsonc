@@ -1,0 +1,8 @@
+// Deploy: CLOUDFLARE_ACCOUNT_ID=<id> npx wrangler deploy --var INBOX_DOMAIN:<inbox subdomain>
+{
+  "name": "shipbash-agent-inbox",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "kv_namespaces": [{ "binding": "INBOX" }]
+}

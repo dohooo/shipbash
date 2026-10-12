@@ -1,0 +1,178 @@
+name: runner-image
+
+# Builds the production runner image, enforces the size budget that keeps
+# Vercel's registry able to process it (oversized images sit in "preparing"
+# forever and every sandbox creation fails with 409 image_not_ready), pushes
+# it to VCR, waits until VCR has prepared it for Sandboxes, and only then points
+# production at the new tag; release.yml deploys the console next.
+on:
+  # Called by release.yml on a v* tag whose diff from the previous tag
+  # touched the image's build inputs (the paths release.yml lists), after
+  # the database migration.
+  workflow_call:
+    outputs:
+      image:
+        description: The image reference production now points at.
+        value: ${{ jobs.build-push-promote.outputs.image }}
+
+concurrency:
+  group: runner-image
+  cancel-in-progress: false
+
+env:
+  # The deployment's Vercel team and console project: repository variables.
+  VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
+  VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT }}
+  IMAGE_REPOSITORY: vcr.vercel.com/${{ vars.VERCEL_SCOPE }}/${{ vars.VERCEL_PROJECT }}/shipbash-runner
+  # Hard budget on the unpacked size. A 7.57GB image never finished
+  # processing on VCR while ~2GB images are sandbox-ready within minutes, so
+  # 3GiB is the regression guard.
+  MAX_IMAGE_BYTES: "3221225472"
+  VERCEL_CLI: vercel@56
+
+jobs:
+  build-push-promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install dependencies (for the build-digest script)
+        run: bun ci --ignore-scripts
+
+      - name: Compute image reference and build digest
+        id: meta
+        env:
+          NODE_OPTIONS: --conditions=development
+        run: |
+          short_sha="$(git rev-parse --short HEAD)"
+          image_version="$(node -p "require('./package.json').version")"
+          build_digest="$(bunx tsx --eval "import { expectedRunnerBuildDigest } from './packages/control-plane/src/runner-image-identity.ts'; expectedRunnerBuildDigest().then((digest) => console.log(digest));")"
+          {
+            echo "build_digest=${build_digest}"
+            echo "image=${IMAGE_REPOSITORY}:${image_version}-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build runner image
+        # linux/amd64 is pinned so the produced image does not depend on the
+        # builder host: every production runner image that has served traffic
+        # was amd64, and amd64 pushes become sandbox-ready fastest on VCR.
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --build-arg "SHIPBASH_RUNNER_BUILD_DIGEST=${{ steps.meta.outputs.build_digest }}" \
+            --file packages/runner/Dockerfile \
+            --tag "${{ steps.meta.outputs.image }}" \
+            .
+
+      - name: Enforce image size budget
+        # The unpacked size is the sum of the layers `docker history` lists,
+        # under either Docker image store: the containerd store reports
+        # `.Size` as the compressed blobs, about a third of it, and counts a
+        # layer it has not unpacked as 0 bytes, so creating a container
+        # unpacks every layer first. A sum still below `.Size` means some
+        # layers were not unpacked, and the sum undercounts.
+        run: |
+          image="${{ steps.meta.outputs.image }}"
+          container="$(docker create --platform linux/amd64 "${image}")"
+          docker rm "${container}" > /dev/null
+          compressed="$(docker image inspect --format '{{.Size}}' "${image}")"
+          layers="$(docker history --human=false --format '{{.Size}}' "${image}")"
+          # Some mawk builds print a sum past 2^31 in e-notation.
+          size="$(awk '{ sum += $1 } END { printf "%.0f", sum }' <<< "${layers}")"
+          echo "Image size: ${size} bytes unpacked, ${compressed} bytes compressed (budget: ${MAX_IMAGE_BYTES} bytes unpacked)"
+          if [ "${size}" -lt "${compressed}" ]; then
+            echo "::error::The image's layers sum to ${size} bytes, less than its ${compressed} compressed bytes:" \
+              "some layers are not unpacked, so its unpacked size cannot be measured."
+            exit 1
+          fi
+          if [ "${size}" -gt "${MAX_IMAGE_BYTES}" ]; then
+            echo "::error::Runner image is ${size} bytes unpacked, over the ${MAX_IMAGE_BYTES}-byte budget." \
+              "Oversized images never become sandbox-ready on Vercel (409 image_not_ready)."
+            exit 1
+          fi
+
+      - name: Link Vercel project
+        run: |
+          npx --yes "${VERCEL_CLI}" link --yes \
+            --project "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" \
+            --token "${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Push image to Vercel Container Registry
+        run: |
+          npx --yes "${VERCEL_CLI}" vcr login docker \
+            --project "${VERCEL_PROJECT}" \
+            --scope "${VERCEL_SCOPE}" \
+            --token "${{ secrets.VERCEL_TOKEN }}"
+          docker push "${{ steps.meta.outputs.image }}"
+
+      - name: Wait until the image is sandbox-ready
+        # VCR prepares the pushed linux/amd64 manifest for Sandboxes once and
+        # reports its status by the manifest's digest, which the push records
+        # in the image's RepoDigests. `errored` and `unoptimized` (an image VCR
+        # cannot serve to Sandboxes) are final. Until VCR has registered the
+        # push, the CLI answers with an error instead, and polling goes on.
+        run: |
+          repo_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "${{ steps.meta.outputs.image }}")"
+          digest="${repo_digest#*@}"
+          deadline=$(( SECONDS + 1200 ))
+          while :; do
+            reply="$(npx --yes "${VERCEL_CLI}" vcr image inspect "${IMAGE_REPOSITORY##*/}" "${digest}" \
+              --format json \
+              --project "${VERCEL_PROJECT}" \
+              --scope "${VERCEL_SCOPE}" \
+              --token "${{ secrets.VERCEL_TOKEN }}" || true)"
+            status="$(jq -r '.status // empty' <<< "${reply}" 2> /dev/null || true)"
+            case "${status}" in
+              ready)
+                echo "Image ${digest} is sandbox-ready."
+                break
+                ;;
+              errored | unoptimized)
+                echo "::error::VCR marked image ${digest} ${status}; no Sandbox can boot from it."
+                exit 1
+                ;;
+              preparing) echo "VCR is preparing image ${digest}." ;;
+              *) echo "No status for image ${digest} yet: ${reply}" ;;
+            esac
+            if [ "${SECONDS}" -ge "${deadline}" ]; then
+              echo "::error::Image did not become sandbox-ready within 20 minutes."
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Mark this commit as the image production runs
+        # The moving `runner-image` tag is release.yml's baseline for "did
+        # the image's inputs change": measured against the image actually in
+        # production, a release whose image build never ran cannot hide a
+        # Dockerfile change from the next one.
+        run: |
+          git tag -f runner-image HEAD
+          git push -f origin refs/tags/runner-image
+
+      - name: Point production at the new image
+        # release.yml deploys the console right after this job, and that
+        # deployment reads the variable; nothing is redeployed here.
+        run: |
+          image="${{ steps.meta.outputs.image }}"
+          npx --yes "${VERCEL_CLI}" env rm SHIPBASH_RUNNER_IMAGE production --yes \
+            --scope "${VERCEL_SCOPE}" \
+            --token "${{ secrets.VERCEL_TOKEN }}" || true
+          printf '%s' "${image}" | npx --yes "${VERCEL_CLI}" env add SHIPBASH_RUNNER_IMAGE production \
+            --scope "${VERCEL_SCOPE}" \
+            --token "${{ secrets.VERCEL_TOKEN }}"

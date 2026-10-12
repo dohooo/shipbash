@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "dom.asynciterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./*"],
+      "@shipbash/control-plane/sign-in-crypto": [
+        "../../packages/control-plane/src/sign-in-crypto.ts"
+      ],
+      "@shipbash/control-plane/store/tenant-store": [
+        "../../packages/control-plane/src/store/tenant-store.ts"
+      ],
+      "@shipbash/control-plane/vercel-sandbox-contract": [
+        "../../packages/control-plane/src/vercel-sandbox-contract.ts"
+      ],
+      "@shipbash/control-plane/vercel-sandbox-dispatch": [
+        "../../packages/control-plane/src/vercel-sandbox-dispatch.ts"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "workflows/**/*.ts"
+  ],
+  "exclude": ["node_modules", "**/*.local.test.*"]
+}

@@ -1,0 +1,40 @@
+{
+  "entries": [
+    {
+      "count": 1,
+      "file": "apps/console/components/ai-elements/prompt-input.tsx",
+      "fingerprint": "aed31f8c1adef995",
+      "ruleId": "@typescript-eslint/consistent-type-assertions"
+    },
+    {
+      "count": 1,
+      "file": "apps/console/components/ai-elements/prompt-input.tsx",
+      "fingerprint": "ca784ac6878a00f8",
+      "ruleId": "@typescript-eslint/consistent-type-assertions"
+    },
+    {
+      "count": 1,
+      "file": "apps/console/components/ai-elements/prompt-input.tsx",
+      "fingerprint": "eaa8a1853ed4547a",
+      "ruleId": "@typescript-eslint/consistent-type-assertions"
+    },
+    {
+      "ceiling": 655,
+      "file": "apps/console/components/ai-elements/prompt-input.tsx",
+      "fingerprint": "d79552cec14c4a2b",
+      "ruleId": "max-lines"
+    },
+    {
+      "ceiling": 367,
+      "file": "apps/console/components/ai-elements/prompt-input.tsx",
+      "fingerprint": "cc475c61df011c56",
+      "ruleId": "max-lines-per-function"
+    }
+  ],
+  "thresholds": {
+    "complexity": 15,
+    "fileLines": 400,
+    "functionLines": 100
+  },
+  "version": 1
+}

@@ -1,0 +1,24 @@
+{
+  "//": "The pi-lane type gate. Runs inside the runner image build and in the gates, beside the pins the Dockerfile's PI_PACKAGES names. checkJs covers the pi files, the build-time smoke among them, and what they import; strictness stays low because the goal is API-surface safety (a pi upgrade that renames steer() or an event type fails the build), not full annotation.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "es2022",
+    "strict": false,
+    "skipLibCheck": true,
+    "lib": [
+      "es2023"
+    ]
+  },
+  "include": [
+    "src/runtime/activity-runner/pi-agent-slot.mjs",
+    "src/runtime/activity-runner/pi-tooling.mjs",
+    "src/runtime/activity-runner/pi-result.mjs",
+    "src/runtime/activity-runner/assistant-feed.mjs",
+    "src/runtime/dropped-stream.mjs",
+    "src/runtime/pi-smoke.mjs"
+  ]
+}

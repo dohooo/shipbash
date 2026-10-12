@@ -1,0 +1,122 @@
+/* /waitlist — the right column's delta on the login chassis. Everything
+   structural comes from ../login/login.module.css unchanged; these rules add
+   the labelled fields, the account line and what the reader asked for, all on
+   --login-* tokens so the dark theme and reduced motion hold.
+
+   The account line is the same shape /access/[team] already uses: a reader who
+   hits this wall and a reader who hits the team gate are reading the same kind
+   of page, and should not be made to learn it twice. */
+
+/* Two fields need naming; login's single email box did not. The label sits
+   above rather than inside, because a prefilled address under a floating
+   placeholder reads as typed-in text the reader has to decide about. */
+/* Element plus class, so the wider column and its rhythm win over the
+   chassis's own .form whichever stylesheet the bundler emits first. */
+form.form {
+	width: min(100%, 470px);
+	gap: 16px;
+}
+.field {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+}
+.label {
+	padding-left: 3px;
+	color: var(--login-subtle);
+	font: 600 var(--text-md) / 1 var(--mono);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+/* Two classes so the full-width submit beats .cta's own fit-content width
+   wherever the two stylesheets land relative to each other. */
+.form .submit {
+	width: 100%;
+	margin-top: 2px;
+}
+/* Three, because the dark theme states .input's border at (0,2,1). */
+.form .field .inputBad {
+	border-color: color-mix(in srgb, #c62828 55%, transparent);
+}
+.form .field .inputBad:focus-visible {
+	border-color: #c62828;
+}
+
+/* Which of the reader's accounts this page is judging. */
+.account {
+	width: min(100%, 470px);
+	margin: -2px 0 0;
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	color: var(--login-subtle);
+	font-size: var(--text-md);
+}
+.account b {
+	color: var(--login-ink);
+	font-weight: 600;
+}
+.account form {
+	display: inline;
+}
+.account button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--login-subtle);
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.account button:hover,
+.account button:focus-visible {
+	color: var(--login-ink);
+}
+
+/* The session switch, after the button: the prefilled Email field already
+   prints the address, so this says only the thing the field cannot. */
+.switch {
+	margin: -4px 0 0;
+	gap: 5px;
+}
+
+/* A request with no acknowledgement is worse than no request. */
+.sent {
+	width: min(100%, 470px);
+	margin: 0;
+}
+.sent strong {
+	display: block;
+	margin-bottom: 3px;
+	color: var(--login-ink);
+	font-size: var(--text-base);
+}
+.sent span {
+	display: block;
+	color: var(--login-subtle);
+	font-size: var(--text-md);
+	line-height: 1.6;
+}
+.sent b {
+	color: var(--login-ink);
+	font-weight: 600;
+}
+
+@media (max-width: 700px) {
+	.account,
+	.sent {
+		text-align: left;
+	}
+	.account {
+		justify-content: center;
+	}
+	/* The labels and the typed text share the input's inner edge. */
+	.field {
+		text-align: left;
+	}
+	.label {
+		padding-left: 24px;
+	}
+}

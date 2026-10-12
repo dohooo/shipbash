@@ -1,0 +1,101 @@
+/* /access/<team> — the right column's delta on the login chassis. Everything
+   structural comes from ../../login/login.module.css unchanged; these rules add
+   the account line, the aside naming who can grant this, and the confirmation
+   box, all on --login-* tokens so the dark theme and reduced motion hold. */
+
+/* Which of the reader's accounts this page is judging. Someone who hits a
+   wrong-team wall usually has two, so the answer names one and offers the
+   other. */
+.account {
+	width: min(100%, 470px);
+	margin: -2px 0 0;
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	color: var(--login-subtle);
+	font-size: var(--text-md);
+}
+.accountMark {
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
+	display: grid;
+	place-items: center;
+	border-radius: var(--radius-full);
+	background: color-mix(in srgb, var(--login-ink) 10%, transparent);
+	color: var(--login-ink);
+}
+.account b {
+	color: var(--login-ink);
+	font-weight: 600;
+}
+.account form {
+	display: inline;
+}
+.account button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--login-subtle);
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.account button:hover,
+.account button:focus-visible {
+	color: var(--login-ink);
+}
+
+/* Who the ask reaches, in the voice of an aside rather than of the ask. */
+.aside {
+	width: min(100%, 470px);
+	margin: -6px 0 0;
+	color: var(--login-subtle);
+	font-size: var(--text-md);
+	line-height: 1.6;
+}
+.aside b {
+	color: var(--login-ink);
+	font-weight: 600;
+}
+
+/* A request with no acknowledgement is worse than no request. */
+.sent {
+	width: min(100%, 470px);
+	display: flex;
+	align-items: flex-start;
+	gap: 11px;
+	padding: 14px 16px;
+	border: 1px solid color-mix(in srgb, var(--login-ink) 14%, transparent);
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--login-ink) 4%, transparent);
+}
+.sent svg {
+	width: 17px;
+	height: 17px;
+	flex: 0 0 17px;
+	margin-top: 1px;
+	color: var(--login-ink);
+}
+.sent strong {
+	display: block;
+	margin-bottom: 3px;
+	color: var(--login-ink);
+	font-size: var(--text-base);
+}
+.sent span {
+	display: block;
+	color: var(--login-subtle);
+	font-size: var(--text-md);
+	line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+	.account {
+		justify-content: center;
+	}
+	.sent {
+		text-align: left;
+	}
+}

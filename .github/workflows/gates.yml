@@ -1,0 +1,107 @@
+name: Gates
+
+# Each job installs Bun, the version package.json's packageManager names, and
+# installs and runs the repository's scripts with it; the scripts run on the
+# runner's Node.
+
+on:
+  pull_request:
+  # A v* tag runs through release.yml, which calls this.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gates-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun ci
+      - name: Lint changed files
+        run: bun run lint
+        env:
+          BIOME_LINT_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          BIOME_LINT_HEAD: ${{ github.sha }}
+      - run: bun run typecheck
+      - run: bun run typecheck:marketing
+      # The pi-lane type gate, the same two commands packages/runner/Dockerfile
+      # runs, so a checkJs error in a pi file (a property read on `unknown`)
+      # fails here instead of in the image build. The pins are read from the
+      # Dockerfile's PI_PACKAGES (scripts/pi-packages.ts) so the two never
+      # drift. Last in this job: `bun add --no-save` adds pi to node_modules,
+      # and nothing after it may see that.
+      - name: Pi lane type gate (as in the runner image build)
+        run: |
+          PI=$(bunx tsx scripts/pi-packages.ts)
+          bun add --no-save --ignore-scripts $PI
+          bunx tsc -p packages/runner/tsconfig.pi.json --noEmit
+
+  contracts:
+    name: Contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # GHCR mirror of public.ecr.aws/supabase/postgres:17.6.1.143 — same
+        # manifest digest; ECR Public rate-limits anonymous pulls. 55322 is
+        # the port scripts/contracts reads by default.
+        image: ghcr.io/supabase/postgres:17.6.1.143
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 55322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h 127.0.0.1"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun ci
+      - name: Verify generated contracts
+        run: bun run contracts:check
+        env:
+          # `supabase gen types` runs postgres-meta in a container it pulls on
+          # demand. The CLI's default registry is public.ecr.aws, whose
+          # anonymous rate limit fails this step ("toomanyrequests: Rate
+          # exceeded", exit 125). GHCR serves the same
+          # digests (postgres-meta:v0.96.6 = sha256:a84cc713…). Local runs
+          # keep the default and their cached images.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun ci
+      - run: bun run build
+      - run: bun run build:marketing

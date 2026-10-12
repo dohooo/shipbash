@@ -1,0 +1,12 @@
+**
+!package.json
+!bun.lock
+!bunfig.toml
+!tsconfig.base.json
+!packages/
+!packages/contracts/
+!packages/contracts/**
+!packages/control-plane/
+!packages/control-plane/**
+!packages/runner/
+!packages/runner/**

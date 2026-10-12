@@ -1,0 +1,98 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/**/*.{ts,mjs}"
+      ],
+      "project": [
+        "scripts/**/*.{ts,mjs}"
+      ],
+      "ignoreDependencies": [
+        "@octokit/app",
+        "@shipbash/control-plane",
+        "@shipbash/runner",
+        "@supabase/supabase-js",
+        "@vercel/sandbox",
+        "cron-parser",
+        "next",
+        "pg-boss",
+        "react",
+        "react-dom",
+        "tldts",
+        "tus-js-client",
+        "workflow",
+        "ws"
+      ]
+    },
+    "apps/console": {
+      "entry": [
+        "proxy.ts",
+        "app/**/{page,layout,route,error,not-found,loading,template,default}.tsx",
+        "app/**/route.ts",
+        ".storybook/main.ts",
+        ".storybook/preview.ts",
+        "app/**/*.stories.tsx",
+        "workflows/**/*.ts"
+      ],
+      "project": [
+        "app/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        ".storybook/**/*.ts",
+        "*.{ts,mjs}"
+      ],
+      "ignoreDependencies": [
+        "tailwindcss"
+      ]
+    },
+    "apps/marketing": {
+      "project": [
+        "**/*.{ts,tsx}"
+      ]
+    },
+    "packages/contracts": {
+      "entry": [
+        "src/runtime/**/*.{mjs,json}"
+      ],
+      "project": [
+        "src/**/*.{ts,mjs}"
+      ]
+    },
+    "packages/control-plane": {
+      "entry": [
+        "src/service.ts",
+        "src/build-runner-image.ts",
+        "src/vercel-sandbox-task.ts",
+        "src/runner-image-identity.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/runner": {
+      "entry": [
+        "src/runtime/**/*.{mjs,js,json}"
+      ],
+      "project": [
+        "src/**/*.{ts,mjs,js}"
+      ],
+      "ignoreDependencies": [
+        "@earendil-works/pi-coding-agent"
+      ]
+    }
+  },
+  "ignore": [
+    "supabase/**",
+    ".claude/**",
+    "packages/runner/src/runtime/novnc-clipboard*.js"
+  ],
+  "ignoreBinaries": [
+    "docker",
+    "psql",
+    "agent-browser"
+  ],
+  "exclude": [
+    "duplicates"
+  ]
+}

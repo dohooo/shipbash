@@ -1,0 +1,38 @@
+{
+  "name": "@shipbash/contracts",
+  "version": "0.81.3",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('src/runtime','dist/runtime',{recursive:true})\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "exports": {
+    "./api/*": {
+      "types": "./src/api/*.ts",
+      "development": "./src/api/*.ts",
+      "default": "./dist/api/*.js"
+    },
+    "./runtime/*": {
+      "types": "./src/runtime/*",
+      "development": "./src/runtime/*",
+      "default": "./dist/runtime/*"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "development": "./src/*.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist/"
+  ],
+  "dependencies": {
+    "tldts": "^7.4.11",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

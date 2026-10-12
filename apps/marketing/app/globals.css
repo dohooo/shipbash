@@ -1,0 +1,258 @@
+:root {
+  --paper: #f7f5f2;
+  --paper-raised: #fdfcfa;
+  --ink: #141414;
+  --muted: #55504a;
+  --soft: #8a857c;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--paper); color: var(--ink); }
+body { margin: 0; min-width: 320px; font-family: Helvetica, Arial, sans-serif; background: var(--paper); }
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; }
+button { color: inherit; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.marketing-page { min-height: 100vh; overflow: clip; }
+.background-eye {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-scroll-stage { height: 220vh; position: relative; z-index: 1; }
+.hero-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+
+.marketing-nav {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 48px;
+}
+.wordmark { display: inline-flex; align-items: center; gap: 12px; }
+.wordmark svg { width: 34px; height: 34px; display: block; }
+.wordmark span {
+  font-family: Sora, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.button-sketch {
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 4px 5px 0 rgba(20, 20, 20, 0.9);
+  font-family: Sora, Helvetica, sans-serif;
+  font-weight: 700;
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+.login-link { padding: 11px 26px; font-size: 14px; }
+.button-sketch:hover,
+.button-sketch:focus-visible {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 2.5px var(--ink), 4px 5px 0 rgba(20, 20, 20, 0.9);
+  transform: scale(1.05) rotate(-1.5deg);
+  outline: none;
+}
+
+.hero-copy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  transform-origin: top center;
+  will-change: top, transform;
+}
+.hero-copy h1 {
+  margin: 0;
+  font: 800 clamp(44px, 6.4vw, 84px) / 1.05 Sora, Helvetica, sans-serif;
+  letter-spacing: -0.03em;
+}
+.hero-copy p {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.hero-eye-wrap {
+  display: inline-block;
+  width: 0.825em;
+  height: 0.825em;
+  margin: 0 -0.07em;
+  vertical-align: -0.15em;
+}
+.hero-eye-wrap > div,
+.hero-eye-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.bash-word { position: relative; display: inline-block; }
+.bash-word svg {
+  position: absolute;
+  left: -2%;
+  bottom: -0.18em;
+  width: 104%;
+  height: 0.22em;
+  overflow: visible;
+}
+.bash-word path { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linecap: round; }
+
+.cta-position {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  will-change: top;
+}
+/* The logos sit on the pill's bottom edge, centered on its border line. */
+.agent-avatars {
+  position: absolute;
+  bottom: 0;
+  right: 52px;
+  display: flex;
+  transform: translateY(calc(50% + 1.25px));
+}
+.agent-avatars img,
+.agent-more {
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: #fff;
+}
+.agent-avatars img { padding: 6px; }
+.agent-more {
+  display: grid;
+  place-items: center;
+}
+.agent-more svg { width: 18px; height: 18px; fill: var(--ink); }
+.agent-avatars > * + * { margin-left: -8px; }
+.url-cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(680px, 84vw);
+  padding: 6px 6px 6px 26px;
+  border: 2.5px solid var(--ink);
+  border-radius: 32px;
+  background: var(--paper-raised);
+  box-shadow: 5px 6px 0 rgba(20, 20, 20, 0.9);
+}
+.url-cta code {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font: 14px / 1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-align: left;
+}
+.url-cta button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+.url-cta button:hover,
+.url-cta button:focus-visible {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 2.5px var(--ink);
+  transform: scale(1.05) rotate(-1.5deg);
+  outline: none;
+}
+.url-cta svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.url-error { margin: 12px 0 0; color: #8b2923; font-size: 14px; }
+
+.preview-position {
+  position: absolute;
+  left: 50%;
+  transform-origin: top center;
+  will-change: top, transform;
+}
+.hero-demo-frame {
+  overflow: hidden;
+  border: 2.5px solid var(--ink);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  box-shadow: 6px -6px 0 rgba(20, 20, 20, 0.12);
+}
+
+@media (max-width: 760px) {
+  .marketing-nav { padding: 18px 20px; }
+  .wordmark { gap: 9px; }
+  .wordmark svg { width: 30px; height: 30px; }
+  .wordmark span { font-size: 17px; }
+  .login-link { padding: 9px 18px; font-size: 13px; }
+  .hero-copy { padding: 0 20px; gap: 15px; }
+  .hero-copy h1 { font-size: clamp(42px, 13vw, 64px); }
+  .hero-copy p { max-width: 34ch; font-size: 16px; line-height: 1.5; }
+  /* The wrapped command keeps clear of the agent logos sitting on the pill's bottom edge. */
+  .url-cta { width: calc(100vw - 40px); gap: 10px; padding-left: 18px; padding-bottom: 7px; }
+  .url-cta code { padding-bottom: 10px; font-size: 13px; line-height: 1.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* biome-ignore lint/complexity/noImportantStyles: the universal selector carries the lowest possible
+     specificity, so only !important can cancel transitions set by more specific rules. */
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+.legal-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.65;
+}
+.legal-home { font-family: Sora, Helvetica, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.02em; }
+.legal-page h1 { margin: 48px 0 4px; font-family: Sora, Helvetica, sans-serif; font-size: 40px; letter-spacing: -0.03em; }
+.legal-page h2 { margin: 40px 0 8px; font-family: Sora, Helvetica, sans-serif; font-size: 20px; letter-spacing: -0.01em; }
+.legal-page p, .legal-page li { color: var(--muted); }
+.legal-page strong { color: var(--ink); }
+.legal-page ul { padding-left: 20px; }
+.legal-page li + li { margin-top: 8px; }
+.legal-page a:not(.legal-home) { text-decoration: underline; text-underline-offset: 3px; }
+.legal-updated { margin: 0 0 32px; color: var(--soft); font-size: 14px; }

@@ -1,0 +1,366 @@
+.page {
+  --login-paper: #f7f5f2;
+  --login-ink: #141414;
+  --login-subtle: #55504a;
+  --login-button: #141414;
+  --login-button-ink: #f7f5f2;
+  --login-shadow: rgba(20, 20, 20, 0.9);
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  overflow: hidden;
+  color: var(--login-ink);
+  background: var(--login-paper);
+  transition: color 350ms ease, background 350ms ease;
+}
+
+.page[data-theme="dark"] {
+  --login-paper: #141414;
+  --login-ink: #f7f5f2;
+  --login-subtle: #a09a90;
+  --login-button: #f7f5f2;
+  --login-button-ink: #141414;
+  --login-shadow: rgba(247, 245, 242, 0.35);
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.brand {
+  position: absolute;
+  z-index: 2;
+  top: 30px;
+  left: 38px;
+  color: var(--login-ink);
+  font-family: Sora, Helvetica, sans-serif;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.brandText {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+
+.visual {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye {
+  width: min(420px, 42vw, 58vh);
+  aspect-ratio: 1;
+  color: var(--login-ink);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.eye svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 26px;
+  padding: 72px 96px 72px 24px;
+}
+
+/* A column carrying five blocks where signing in carries three. Two classes,
+   so the tightening wins over .content wherever the stylesheets land. */
+.content.contentDense {
+  gap: 20px;
+}
+
+.title {
+  margin: 0;
+  color: var(--login-ink);
+  font-family: Sora, Helvetica, sans-serif;
+  font-size: var(--text-4xl);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.description {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--login-subtle);
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.notice,
+.error {
+  width: min(100%, 470px);
+  margin: -8px 0 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--login-ink) 16%, transparent);
+  border-radius: var(--radius-lg);
+  color: var(--login-subtle);
+  background: color-mix(in srgb, var(--login-paper) 88%, var(--login-ink) 12%);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.notice code {
+  color: var(--login-ink);
+  font-family: var(--mono);
+  font-size: var(--text-md);
+}
+
+.error {
+  border-color: color-mix(in srgb, #c62828 36%, transparent);
+  color: #c62828;
+  background: color-mix(in srgb, var(--login-paper) 92%, #c62828 8%);
+}
+
+.form {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.input {
+  width: 100%;
+  padding: 16px 24px;
+  border: 2px solid color-mix(in srgb, var(--login-ink) 14%, transparent);
+  border-radius: var(--radius-full);
+  color: var(--login-ink);
+  background: color-mix(in srgb, var(--login-ink) 4.5%, transparent);
+  font-family: Sora, Helvetica, sans-serif;
+  font-size: var(--text-lg);
+  line-height: 1.2;
+  transition: border-color 150ms ease, background 350ms ease, color 350ms ease;
+}
+
+.page[data-theme="dark"] .input {
+  border-color: color-mix(in srgb, var(--login-ink) 18%, transparent);
+  background: color-mix(in srgb, var(--login-ink) 7%, transparent);
+}
+
+.input::placeholder {
+  color: color-mix(in srgb, var(--login-subtle) 75%, transparent);
+}
+
+.input:focus-visible {
+  outline: 0;
+  border-color: var(--login-ink);
+}
+
+.cta.ctaFull {
+  width: min(100%, 380px);
+}
+
+.cta {
+  width: fit-content;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 17px 30px;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--login-button-ink);
+  background: var(--login-button);
+  box-shadow: 4px 5px 0 var(--login-shadow);
+  cursor: pointer;
+  font-family: Sora, Helvetica, sans-serif;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease,
+    opacity 400ms ease;
+}
+
+.ctaBusy {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.cta:hover:not(:disabled),
+.cta:focus-visible:not(:disabled) {
+  color: var(--login-ink);
+  background: var(--login-paper);
+  box-shadow: inset 0 0 0 2.5px var(--login-ink), 4px 5px 0 var(--login-shadow);
+  transform: scale(1.02) rotate(-0.8deg);
+  outline: 0;
+}
+
+.cta:active:not(:disabled) {
+  transform: scale(1.01) rotate(-0.5deg);
+}
+
+.cta:focus-visible:not(:disabled) {
+  outline: 2px solid var(--login-ink);
+  outline-offset: 5px;
+}
+
+.cta:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: 3px 4px 0 color-mix(in srgb, var(--login-shadow) 55%, transparent);
+}
+
+.ctaIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .brand {
+    top: 24px;
+    left: 28px;
+  }
+
+  .content {
+    padding-right: 36px;
+  }
+
+  .eye {
+    width: min(350px, 43vw, 52vh);
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    min-height: 100svh;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(188px, 30vh) minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .visual {
+    align-items: flex-end;
+  }
+
+  .eye {
+    width: min(190px, 50vw, 24vh);
+  }
+
+  /* One column, 440px at most and centred; every field and CTA in it takes
+     its full width, so they all share one. */
+  .content {
+    width: 100%;
+    max-width: 440px;
+    justify-self: center;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 18px;
+    padding: 30px 24px 48px;
+    text-align: center;
+  }
+
+  .form {
+    width: 100%;
+    align-items: center;
+  }
+
+  .cta.ctaFull,
+  .ctaStack {
+    width: 100%;
+  }
+
+  .title {
+    font-size: var(--text-3xl);
+    text-wrap: balance;
+  }
+
+  .notice,
+  .error {
+    text-align: left;
+  }
+}
+
+@media (max-height: 600px) and (min-width: 701px) {
+  .content {
+    gap: 18px;
+    padding-block: 36px;
+  }
+
+  .eye {
+    width: min(330px, 48vh);
+  }
+
+  .title {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .cta {
+    transition-duration: 1ms;
+  }
+
+  .cta:hover:not(:disabled),
+  .cta:focus-visible:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Two providers, one column: the stack takes the width the single CTA had. */
+.ctaStack {
+  width: min(100%, 380px);
+  display: grid;
+  gap: 14px;
+}
+
+.ctaStack .cta.ctaFull {
+  width: 100%;
+}
+
+/* The clicked provider holds full strength and swaps its mark for a spinner;
+   the other one takes the .ctaBusy fade. */
+.ctaPending {
+  pointer-events: none;
+}
+
+.ctaSpinner {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cta-spin 800ms linear infinite;
+}
+
+@keyframes cta-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctaSpinner {
+    animation-duration: 2.4s;
+  }
+}

@@ -1,0 +1,280 @@
+/* /internal/waitlist — not the login chassis. This is a plain document on the
+   console's own tokens, because it is not part of the product: nothing links
+   to it, and what it shows is names, addresses and each team's month. The one
+   thing it changes on a Team is its monthly Run quota. */
+
+.page {
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 46px 28px 90px;
+	background: var(--color-soft);
+	min-height: 100vh;
+}
+.head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 24px;
+	margin-bottom: 7px;
+}
+.head h1 {
+	margin: 0;
+	color: var(--ink);
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+.lock {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--muted);
+	cursor: pointer;
+	font-family: inherit;
+	font-size: var(--text-md);
+	font-weight: 600;
+}
+.lock:hover,
+.lock:focus-visible {
+	color: var(--ink);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.lede {
+	max-width: 62ch;
+	margin: 0 0 26px;
+	color: var(--muted);
+	font-size: var(--text-base);
+	line-height: 1.6;
+	text-wrap: pretty;
+}
+.problem {
+	max-width: 62ch;
+	margin: 0 0 20px;
+	color: var(--red);
+	font-size: var(--text-base);
+	line-height: 1.6;
+}
+.counts {
+	display: flex;
+	gap: 28px;
+	margin: 0 0 20px;
+	padding: 0;
+	list-style: none;
+}
+.counts div {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+.counts dt {
+	color: var(--faint);
+	font: 600 var(--text-xs) / 1 var(--mono);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.counts dd {
+	margin: 0;
+	color: var(--ink);
+	font-size: 30px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1;
+}
+
+.card {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md, 10px);
+	background: var(--panel);
+	overflow: hidden;
+}
+/* Fixed columns, so every row agrees where the actions begin. */
+.card table {
+	table-layout: fixed;
+}
+.card th:nth-child(1) {
+	width: 38%;
+}
+.card th:nth-child(2) {
+	width: 27%;
+}
+.card th:nth-child(3) {
+	width: 86px;
+}
+.card th:nth-child(4) {
+	width: 108px;
+}
+.card th:nth-child(5) {
+	width: 178px;
+}
+
+.site {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+.site .mark {
+	width: 26px;
+	height: 26px;
+	flex: 0 0 26px;
+	display: grid;
+	place-items: center;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: #fff;
+	color: var(--ink);
+	font: 700 var(--text-xs) / 1 var(--mono);
+}
+.site b {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+.when {
+	color: var(--muted);
+	font-size: var(--text-md);
+	white-space: nowrap;
+}
+
+/* `display: flex` on a <td> takes the cell out of the table's column sizing,
+   and every row then computes its own widths. The flex box goes inside. */
+.actions > span {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+}
+.actions form {
+	display: contents;
+}
+
+/* Not `opacity`: a blanket .5 took body text to 3.41:1 and the small text to
+   2.08:1, under the 4.5:1 minimum. The pill already carries the state. */
+.shelved .site b,
+.shelved td:nth-child(2) {
+	color: var(--muted);
+	font-weight: 500;
+}
+.shelved .site .mark {
+	color: var(--muted);
+}
+
+.note {
+	max-width: 62ch;
+	margin: 22px 0 0;
+	color: var(--faint);
+	font-size: var(--text-md);
+	line-height: 1.65;
+}
+
+/* Teams this month: Runs, cost and the quota, edited in place. */
+.teams {
+	margin-top: 48px;
+}
+.teams h2 {
+	margin: 0 0 7px;
+	color: var(--ink);
+	font-size: 20px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+.teamCard {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md, 10px);
+	background: var(--panel);
+	overflow: hidden;
+}
+.teamCard table {
+	table-layout: fixed;
+}
+.teamCard th:nth-child(2) {
+	width: 110px;
+}
+.teamCard th:nth-child(3) {
+	width: 120px;
+}
+.teamCard th:nth-child(4) {
+	width: 230px;
+}
+.teamCard b {
+	font-weight: 600;
+}
+.teamCard .number {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.quota {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+}
+.quota input {
+	width: 96px;
+	padding: 6px 8px;
+	border: 1px solid var(--line-strong);
+	border-radius: 6px;
+	background: #fff;
+	color: var(--ink);
+	font: inherit;
+	text-align: right;
+}
+
+/* Opened with showModal(). A <dialog> without the `open` attribute is inert in
+   Chromium: forcing display past the UA `display: none` paints it but leaves
+   its subtree unfocusable, so `.focus()` no-ops, Tab cannot reach the
+   destructive button, and there is no focus trap. showModal() supplies initial
+   focus, background inertness, Escape-to-close and ::backdrop for free — and
+   the `display: flex` below is exactly why the `:not([open])` rule is needed. */
+.modal {
+	position: fixed;
+	inset: 0;
+	margin: auto;
+	display: flex;
+	flex-direction: column;
+	width: min(460px, calc(100vw - 80px));
+	padding: 0;
+	border: 1px solid var(--line-strong);
+	background: var(--bg);
+	box-shadow: 0 24px 60px rgba(23, 23, 23, 0.22);
+}
+.modal:not([open]) {
+	display: none;
+}
+.modal::backdrop {
+	background: rgba(23, 23, 23, 0.28);
+}
+.modalBody {
+	padding: 20px 22px 18px;
+}
+.modalBody strong {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--ink);
+	font-size: var(--text-lg);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+.modalBody p {
+	margin: 0;
+	color: var(--muted);
+	font-size: var(--text-base);
+	line-height: 1.6;
+	text-wrap: pretty;
+}
+.modalBody b {
+	color: var(--ink);
+	font-weight: 600;
+}
+.modalFoot {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	padding: 12px 18px;
+	border-top: 1px solid var(--line);
+	background: var(--soft);
+}

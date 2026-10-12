@@ -1,0 +1,45 @@
+name: release-cli
+
+# changesets on main: while `.changeset/*.md` files are pending, the action
+# keeps a "Release shipbash" pull request up to date (versions, CHANGELOG,
+# and bun.lock, which `version-packages` refreshes after them);
+# once that is merged, it publishes packages/cli to npm and tags the release.
+# `changeset publish` publishes with npm, authenticated by the NPM_TOKEN
+# secret.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-cli
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun ci --ignore-scripts
+      - uses: changesets/action@v1
+        with:
+          version: bun run version-packages
+          publish: bun run release:cli
+          title: "Release shipbash"
+          commit: "chore: release shipbash"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

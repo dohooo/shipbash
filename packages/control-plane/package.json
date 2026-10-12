@@ -1,0 +1,55 @@
+{
+  "name": "@shipbash/control-plane",
+  "version": "0.81.3",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
+    "typecheck": "node ../../node_modules/typescript-7/bin/tsc -p tsconfig.json --noEmit"
+  },
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    "./*": {
+      "types": "./src/*.ts",
+      "development": "./src/*.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "dependencies": {
+    "@chat-adapter/slack": "4.41.1",
+    "@chat-adapter/state-pg": "4.41.1",
+    "@earendil-works/chord": "1.0.1",
+    "@earendil-works/pi-agent-core": "1.0.1",
+    "@earendil-works/pi-ai": "1.0.1",
+    "@earendil-works/pi-codemode": "1.0.1",
+    "@earendil-works/pi-coding-agent": "1.0.1",
+    "@earendil-works/pi-mcp": "1.0.1",
+    "@earendil-works/pi-telemetry": "1.0.1",
+    "@earendil-works/pi-tui": "1.0.1",
+    "@octokit/app": "^16.1.2",
+    "@octokit/plugin-paginate-rest": "^14.0.0",
+    "@shipbash/contracts": "workspace:*",
+    "@shipbash/runner": "workspace:*",
+    "@supabase/supabase-js": "2.110.2",
+    "@vercel/oidc": "3.2.0",
+    "@vercel/sandbox": "3.5.1",
+    "chat": "4.41.1",
+    "cron-parser": "5.6.1",
+    "fflate": "0.8.3",
+    "gpt-tokenizer": "4.0.0",
+    "jose": "^6.2.3",
+    "pg": "^8.23.1",
+    "pg-boss": "^12.26.0",
+    "postgres": "3.4.9",
+    "resend": "^6.28.1",
+    "tus-js-client": "4.3.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "typescript-7": "npm:typescript@7.0.2"
+  }
+}

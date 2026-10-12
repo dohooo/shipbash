@@ -1,0 +1,5 @@
+**/.next/cache/
+**/.next/dev/
+**/.next/diagnostics/
+**/.next/trace
+**/.next/**/*.map
