@@ -156,7 +156,6 @@ const [
   favicon32,
   favicon48,
   githubBadgePreview,
-  socialPreview,
   openGraph,
   launchCover,
 ] = await Promise.all([
@@ -173,10 +172,11 @@ const [
   png(faviconSvg, 32),
   png(faviconSvg, 48),
   png(githubBadgePreviewSvg(), 400),
-  png(socialSvg(1280, 640, PAPER, INK), 1280, 640),
   png(socialSvg(1200, 630, PAPER, INK), 1200, 630),
   png(socialSvg(1600, 900, BLACK, WHITE), 1600, 900),
 ]);
+
+const socialPreview = await readFile(join(SOURCE_DIRECTORY, "shipbash-social-preview-1280x640.png"));
 
 const faviconIco = ico([
   { size: 16, data: favicon16 },
