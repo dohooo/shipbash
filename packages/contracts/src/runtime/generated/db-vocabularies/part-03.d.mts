@@ -7,14 +7,6 @@ export declare const PUBLIC_GITHUB_INSTALLATIONS_STATUS_VALUES: readonly [
 ];
 export type PublicGithubInstallationsStatus =
 	(typeof PUBLIC_GITHUB_INSTALLATIONS_STATUS_VALUES)[number];
-export declare const PUBLIC_GITHUB_WEBHOOK_DELIVERIES_PROCESSING_STATUS_VALUES: readonly [
-	"received",
-	"ignored",
-	"normalized",
-	"failed",
-];
-export type PublicGithubWebhookDeliveriesProcessingStatus =
-	(typeof PUBLIC_GITHUB_WEBHOOK_DELIVERIES_PROCESSING_STATUS_VALUES)[number];
 export declare const PUBLIC_PRODUCT_KNOWLEDGE_KIND_VALUES: readonly [
 	"qa",
 	"page",
@@ -36,19 +28,6 @@ export declare const PUBLIC_PRODUCT_KNOWLEDGE_STATUS_VALUES: readonly [
 ];
 export type PublicProductKnowledgeStatus =
 	(typeof PUBLIC_PRODUCT_KNOWLEDGE_STATUS_VALUES)[number];
-export declare const PUBLIC_PROJECT_MAINTENANCE_SCHEDULE_OCCURRENCES_STATUS_VALUES: readonly [
-	"pending",
-	"processing",
-	"completed",
-];
-export type PublicProjectMaintenanceScheduleOccurrencesStatus =
-	(typeof PUBLIC_PROJECT_MAINTENANCE_SCHEDULE_OCCURRENCES_STATUS_VALUES)[number];
-export declare const PUBLIC_PROJECT_MAINTENANCE_SCHEDULES_CADENCE_VALUES: readonly [
-	"off",
-	"daily",
-];
-export type PublicProjectMaintenanceSchedulesCadence =
-	(typeof PUBLIC_PROJECT_MAINTENANCE_SCHEDULES_CADENCE_VALUES)[number];
 export declare const PUBLIC_PROJECT_REPOSITORIES_ACCESS_STATUS_VALUES: readonly [
 	"ready",
 	"reconnect_required",
@@ -68,6 +47,21 @@ export declare const PUBLIC_PROJECT_TRUSTED_ACCESS_STATUS_VALUES: readonly [
 ];
 export type PublicProjectTrustedAccessStatus =
 	(typeof PUBLIC_PROJECT_TRUSTED_ACCESS_STATUS_VALUES)[number];
+export declare const PUBLIC_PROJECTS_AGENT_RUNTIME_VALUES: readonly ["pi"];
+export type PublicProjectsAgentRuntime =
+	(typeof PUBLIC_PROJECTS_AGENT_RUNTIME_VALUES)[number];
+export declare const PUBLIC_PROJECTS_LIFECYCLE_STATUS_VALUES: readonly [
+	"active",
+	"needs_attention",
+	"archived",
+];
+export type PublicProjectsLifecycleStatus =
+	(typeof PUBLIC_PROJECTS_LIFECYCLE_STATUS_VALUES)[number];
+export declare const PUBLIC_PROPOSALS_KIND_VALUES: readonly [
+	"create_suite",
+	"change_suite",
+];
+export type PublicProposalsKind = (typeof PUBLIC_PROPOSALS_KIND_VALUES)[number];
 
 interface DatabaseCheckVocabularyPart {
 	readonly schema: string;

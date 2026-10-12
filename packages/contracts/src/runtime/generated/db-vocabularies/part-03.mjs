@@ -5,8 +5,6 @@ export const PUBLIC_GITHUB_INSTALLATIONS_STATUS_VALUES = Object.freeze([
 	"active",
 	"revoked",
 ]);
-export const PUBLIC_GITHUB_WEBHOOK_DELIVERIES_PROCESSING_STATUS_VALUES =
-	Object.freeze(["received", "ignored", "normalized", "failed"]);
 export const PUBLIC_PRODUCT_KNOWLEDGE_KIND_VALUES = Object.freeze([
 	"qa",
 	"page",
@@ -22,10 +20,6 @@ export const PUBLIC_PRODUCT_KNOWLEDGE_STATUS_VALUES = Object.freeze([
 	"active",
 	"retired",
 ]);
-export const PUBLIC_PROJECT_MAINTENANCE_SCHEDULE_OCCURRENCES_STATUS_VALUES =
-	Object.freeze(["pending", "processing", "completed"]);
-export const PUBLIC_PROJECT_MAINTENANCE_SCHEDULES_CADENCE_VALUES =
-	Object.freeze(["off", "daily"]);
 export const PUBLIC_PROJECT_REPOSITORIES_ACCESS_STATUS_VALUES = Object.freeze([
 	"ready",
 	"reconnect_required",
@@ -39,6 +33,16 @@ export const PUBLIC_PROJECT_TRUSTED_ACCESS_STATUS_VALUES = Object.freeze([
 	"invalid",
 	"revoked",
 ]);
+export const PUBLIC_PROJECTS_AGENT_RUNTIME_VALUES = Object.freeze(["pi"]);
+export const PUBLIC_PROJECTS_LIFECYCLE_STATUS_VALUES = Object.freeze([
+	"active",
+	"needs_attention",
+	"archived",
+]);
+export const PUBLIC_PROPOSALS_KIND_VALUES = Object.freeze([
+	"create_suite",
+	"change_suite",
+]);
 
 const databaseCheckVocabularies = Object.freeze([
 	Object.freeze({
@@ -47,13 +51,6 @@ const databaseCheckVocabularies = Object.freeze([
 		column: "status",
 		constraint: "github_installations_status_check",
 		values: PUBLIC_GITHUB_INSTALLATIONS_STATUS_VALUES,
-	}),
-	Object.freeze({
-		schema: "public",
-		table: "github_webhook_deliveries",
-		column: "processing_status",
-		constraint: "github_webhook_deliveries_processing_status_check",
-		values: PUBLIC_GITHUB_WEBHOOK_DELIVERIES_PROCESSING_STATUS_VALUES,
 	}),
 	Object.freeze({
 		schema: "public",
@@ -78,20 +75,6 @@ const databaseCheckVocabularies = Object.freeze([
 	}),
 	Object.freeze({
 		schema: "public",
-		table: "project_maintenance_schedule_occurrences",
-		column: "status",
-		constraint: "project_maintenance_schedule_occurrences_status_check",
-		values: PUBLIC_PROJECT_MAINTENANCE_SCHEDULE_OCCURRENCES_STATUS_VALUES,
-	}),
-	Object.freeze({
-		schema: "public",
-		table: "project_maintenance_schedules",
-		column: "cadence",
-		constraint: "project_maintenance_schedules_cadence_check",
-		values: PUBLIC_PROJECT_MAINTENANCE_SCHEDULES_CADENCE_VALUES,
-	}),
-	Object.freeze({
-		schema: "public",
 		table: "project_repositories",
 		column: "access_status",
 		constraint: "project_repositories_access_status_check",
@@ -110,6 +93,27 @@ const databaseCheckVocabularies = Object.freeze([
 		column: "status",
 		constraint: "project_trusted_access_status_check",
 		values: PUBLIC_PROJECT_TRUSTED_ACCESS_STATUS_VALUES,
+	}),
+	Object.freeze({
+		schema: "public",
+		table: "projects",
+		column: "agent_runtime",
+		constraint: "projects_agent_runtime_check",
+		values: PUBLIC_PROJECTS_AGENT_RUNTIME_VALUES,
+	}),
+	Object.freeze({
+		schema: "public",
+		table: "projects",
+		column: "lifecycle_status",
+		constraint: "projects_lifecycle_status_check",
+		values: PUBLIC_PROJECTS_LIFECYCLE_STATUS_VALUES,
+	}),
+	Object.freeze({
+		schema: "public",
+		table: "proposals",
+		column: "kind",
+		constraint: "proposals_kind_check",
+		values: PUBLIC_PROPOSALS_KIND_VALUES,
 	}),
 ]);
 

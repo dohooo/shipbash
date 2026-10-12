@@ -24,9 +24,6 @@ export type PublicActivitiesStatus =
 	(typeof PUBLIC_ACTIVITIES_STATUS_VALUES)[number];
 export declare const PUBLIC_ACTIVITIES_TRIGGER_SOURCE_VALUES: readonly [
 	"web",
-	"cli",
-	"webhook",
-	"schedule",
 	"retry",
 	"slack",
 ];
