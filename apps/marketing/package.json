@@ -1,6 +1,6 @@
 {
   "name": "shipbash-marketing",
-  "version": "0.83.1",
+  "version": "0.84.0",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
