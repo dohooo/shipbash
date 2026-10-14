@@ -4,7 +4,7 @@
 // it read that screen beside the page and take the terminal steps too.
 import { renderJourneySteps } from "@shipbash/contracts/runtime/journey-steps.mjs";
 import { splitWaiting } from "./action-requests.mjs";
-import { chooseJevAction, closingOptions, judgeJevCheckpoint, pageOptions } from "./jev-actions.mjs";
+import { chooseJevAction, closingOptions, pageOptions } from "./jev-actions.mjs";
 import { judge, record, settle, stepRemains } from "./jev-checklist.mjs";
 import { readSteps, whichStep } from "./jev-step-questions.mjs";
 import { attribute, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
@@ -72,30 +72,11 @@ function roundOf(state, judgements, busyPage) {
 }
 
 /**
- * Every later open checkpoint's three judgements alone, asked in parallel on
- * this page. A request that fails leaves its checkpoint open; its record says
- * why.
- */
-async function readLater(run, state, request) {
-  const later = run.checklist.slice(run.checklist.indexOf(state.currentCheckpoint) + 1).filter((item) => item.status !== "passed");
-  const answers = await Promise.allSettled(
-    later.map((checkpoint) => run.judge({ state: { ...state, currentCheckpoint: checkpoint }, ...request })),
-  );
-  run.requests += later.length;
-  return later.map((checkpoint, index) => {
-    const answer = answers[index];
-    return answer.status === "fulfilled"
-      ? { checkpoint, judgements: answer.value.checkpoint ?? null }
-      : { checkpoint, judgements: null, error: String(answer.reason instanceof Error ? answer.reason.message : answer.reason) };
-  });
-}
-
-/**
- * One round on a page: the current checkpoint's request (the next action, its
- * three judgements, and whether the page is busy), and, in a round that acts,
- * each later open checkpoint's judgements too. A round acts only while the
- * current checkpoint still reads a step left, and that is when the walk may be
- * taking a later checkpoint's steps: judged only once current, a later
+ * One round on a page: one request for the next action, the current
+ * checkpoint's three judgements, whether the page is busy, and each later
+ * open checkpoint's judgements, which only a round that acts reads. A round
+ * acts only while the current checkpoint still reads a step left, and that is
+ * when the walk may be taking a later checkpoint's steps: judged only once current, a later
  * checkpoint went unread on its own page whenever the walk took its steps
  * before the earlier one settled, and was judged on the page the walk came
  * back to and handed back. A round that judges
@@ -106,18 +87,23 @@ async function readLater(run, state, request) {
  */
 async function decide(run, state, options) {
   const { request } = run;
-  const { checkpoint, busy = null, ...action } = await run.choose({ state, options, ...request });
+  // Every later open checkpoint is asked about in the same request (jev-actions.mjs laterQuestions).
+  const current = run.checklist.indexOf(state.currentCheckpoint);
+  const later = run.checklist.flatMap((item, index) => (index > current && item.status !== "passed" ? [index] : []));
+  const { checkpoint, busy = null, later: laterAnswers = [], ...action } = await run.choose({ state, options, later, ...request });
   run.requests += 1;
   const busyPage = (busy ?? 0) >= BUSY_THRESHOLD;
   const round = roundOf(state, checkpoint, busyPage);
-  const laterReadings = round === "act" ? await readLater(run, state, request) : [];
+  const laterReadings = round === "act"
+    ? laterAnswers.map(({ index, judgements }) => ({ checkpoint: run.checklist[index], judgements }))
+    : [];
   await record(run, "action", {
     ...action,
     busy,
     checkpoint: state.currentCheckpoint.id,
     judgements: checkpoint ?? null,
     later: Object.fromEntries(
-      laterReadings.map(({ checkpoint: item, judgements, error }) => [item.id, error ? { error } : judgements]),
+      laterReadings.map(({ checkpoint: item, judgements }) => [item.id, judgements]),
     ),
   });
   return { round, choice: action.choice, judgements: checkpoint, busyPage, laterReadings };
@@ -282,7 +268,6 @@ function newRun(input, options) {
     values,
     terminalSteps,
     choose: options.choose ?? chooseJevAction,
-    judge: options.judge ?? judgeJevCheckpoint,
     readSteps: options.readSteps ?? readSteps,
     whichStep: options.whichStep ?? whichStep,
     onDecision: options.onDecision ?? (() => {}),

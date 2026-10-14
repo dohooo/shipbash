@@ -9,7 +9,7 @@ import { startAgentPointerChannelReader } from "../agent-pointer.mjs";
 import { isHookRole } from "@shipbash/contracts/runtime/case-role-contract.mjs";
 import { agentServices, REVIEW_MODEL_CONTRACT } from "@shipbash/contracts/runtime/agent-model.mjs";
 import { browserGoneCaseResult, browserUnresponsiveCaseResult, timedOutCaseResult, unfinishedSupervisionResult } from "../case-verdicts.mjs";
-import { buildCaseProductionPromptForRuntime, buildCodeEvidenceProductionPromptForRuntime } from "@shipbash/contracts/runtime/production-prompts.mjs";
+import { buildCaseProductionPromptForRuntime, buildCodeEvidenceProductionPromptForRuntime, caseJourneyBriefForRuntime } from "@shipbash/contracts/runtime/production-prompts.mjs";
 import { startNarrationReader } from "../recording-narration.mjs";
 import { historyPathsFrom, readCaseRoute } from "../history-records.mjs";
 import { progressOptions } from "../progress-session.mjs";
@@ -231,7 +231,7 @@ export async function runCase(
     // The GitHub reads pi's MCP extension serves reach the walk from the session's events.
     const watchGitHub = watchExtensionTools(watch);
     try {
-      // Jev's constraints are the brief alone; the history note is the supervising agent's.
+      // Jev's constraints are the Journey's part of the brief: the rest of it, and the history note, are the supervising agent's.
       const brief = buildCaseProductionPromptForRuntime(suite, testCase, initialChecklist);
       const { systemPrompt, appendSystemPrompt } = scenarioPrompt("case", tooling.rows);
       const lifecycle = piLifecycleProjector(context, tooling.sources, gate.capture);
@@ -255,7 +255,7 @@ export async function runCase(
         // Each model response's tokens, under the selection the walk announced.
         onUsage: (counts) => emit("agent", "agent_usage", { ...context, ...selection, ...counts }),
       }, {
-        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk, route,
+        testCase, constraints: caseJourneyBriefForRuntime(suite, testCase), env, context, initialChecklist, walk, firstWalk, route,
         onToolEvent: gate.jevToolEvents(tooling.sources),
         readTerminal: () => terminal?.screen() ?? null,
       });

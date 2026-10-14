@@ -101,6 +101,19 @@ export function buildCaseProductionPrompt(
 		`Progress contract ${contracts.progress_checklist.version} (${contracts.progress_checklist.hash}): ${contracts.progress_checklist.instructions}`,
 		`Result contract ${contracts.result_delivery.version} (${contracts.result_delivery.hash}): ${contracts.result_delivery.instructions}`,
 		"",
+		...caseJourneyLines(suite, testCase),
+	].join("\n");
+}
+
+/**
+ * The Journey's own part of a case brief: where it runs, what it is, what the
+ * environment provides, its checkpoints and its steps. The brief ends with
+ * it; Jev reads it alone as its constraints, since the rest instructs the
+ * supervising agent about its tools, reports and result.
+ */
+export function caseJourneyLines(suite, testCase) {
+	const hook = typeof testCase.role === "string" && testCase.role !== "journey";
+	return [
 		`Production URL: ${suite.productionUrl}`,
 		...(suite.repository
 			? [boundRepositoryLine(suite.repository, suite.repositoryCommitSha ? `this run's commit is ${suite.repositoryCommitSha}` : null)]
@@ -120,7 +133,7 @@ export function buildCaseProductionPrompt(
 		JSON.stringify(testCase.checkpoints),
 		hook ? "Hook requirement:" : "Journey requirement:",
 		renderJourneySteps(testCase.steps),
-	].join("\n");
+	];
 }
 
 function compactCaseResult(result) {

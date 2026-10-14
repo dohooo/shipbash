@@ -103,7 +103,6 @@ async function runSupportedCase(options, config, deps) {
       settle: () => config.onToolEvent?.({ type: JEV_SETTLE_PICTURE }),
       choose: deps.choose,
       motionMaxMs: deps.motionMaxMs,
-      judge: deps.judge,
       readTerminal: config.readTerminal,
       redact,
       onDecision: (selection) =>
