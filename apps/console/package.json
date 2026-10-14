@@ -1,6 +1,6 @@
 {
   "name": "@shipbash/console",
-  "version": "0.81.6",
+  "version": "0.82.0",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
