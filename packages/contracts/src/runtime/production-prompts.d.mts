@@ -83,6 +83,12 @@ export function buildCaseProductionPromptForRuntime(
   initialChecklist?: readonly unknown[] | null,
 ): string;
 
+/** The Journey's own part of a case brief: Jev's constraints. */
+export function caseJourneyBriefForRuntime(
+  suite: Parameters<typeof buildCaseProductionPrompt>[0],
+  testCase: Parameters<typeof buildCaseProductionPrompt>[1],
+): string;
+
 /** The bound repository every agent's brief names, with the commit the work is about. */
 export function boundRepositoryLine(repository: RuntimeRepository, commit?: string | null): string;
 

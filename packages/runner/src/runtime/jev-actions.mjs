@@ -255,8 +255,22 @@ async function ask(questions, { state, jev, signal = undefined, redact = (text) 
   return { result, durationMs: Date.now() - started };
 }
 
-const judgementsOf = (result) =>
-  Object.fromEntries(Object.keys(CHECKPOINT_QUESTIONS).map((name) => [name, acceptedNoul(result, name)]));
+const judgementsOf = (result, prefix = "") =>
+  Object.fromEntries(Object.keys(CHECKPOINT_QUESTIONS).map((name) => [name, acceptedNoul(result, `${prefix}${name}`)]));
+
+/**
+ * The current checkpoint's three questions, asked of the open checkpoint at
+ * `progress[index]` instead: the state already carries every checkpoint, so a
+ * later one is judged in the same request as the action, on the same page,
+ * rather than in a request of its own that sends the page again.
+ */
+function laterQuestions(index) {
+  const of = (text) =>
+    text.replaceAll("`currentCheckpoint.goal`", `\`progress[${index}].goal\``).replaceAll("`currentCheckpoint`", `\`progress[${index}]\``);
+  return Object.fromEntries(
+    Object.entries(CHECKPOINT_QUESTIONS).map(([name, question]) => [`later${index}_${name}`, { ...question, instructions: of(question.instructions) }]),
+  );
+}
 
 /**
  * One request asks for the next action, the current checkpoint's three
@@ -265,12 +279,13 @@ const judgementsOf = (result) =>
  * request would return; the caller reads the action only while a step
  * remains and the page is not waited on.
  */
-export async function chooseJevAction({ state, options, jev, signal = undefined, redact = (text) => text, fetchImpl = fetch }) {
+export async function chooseJevAction({ state, options, later = [], jev, signal = undefined, redact = (text) => text, fetchImpl = fetch }) {
   const { result, durationMs } = await ask(
     {
       target: { type: "choice", instructions: ACTION_INSTRUCTIONS, criteria: criteria(options) },
       ...CHECKPOINT_QUESTIONS,
       busy: BUSY_QUESTION,
+      ...Object.assign({}, ...later.map(laterQuestions)),
     },
     { state, jev, signal, redact, fetchImpl },
   );
@@ -279,16 +294,9 @@ export async function chooseJevAction({ state, options, jev, signal = undefined,
     durationMs,
     checkpoint: judgementsOf(result),
     busy: acceptedNoul(result, "busy"),
+    // Each later open checkpoint's judgements, by its index in `progress`.
+    later: later.map((index) => ({ index, judgements: judgementsOf(result, `later${index}_`) })),
   };
-}
-
-/**
- * The current checkpoint's three judgements alone, the same questions asked
- * without the action: for a checkpoint the walk judges but does not act on.
- */
-export async function judgeJevCheckpoint(request) {
-  const { result, durationMs } = await ask(CHECKPOINT_QUESTIONS, request);
-  return { durationMs, checkpoint: judgementsOf(result) };
 }
 
 /**

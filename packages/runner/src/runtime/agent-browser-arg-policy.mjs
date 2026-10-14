@@ -30,11 +30,20 @@ import { rewriteTabLabelArguments, tabLabelNote } from "./agent-browser-tab-labe
  * replays and persists browser state the harness owns; `headed`, `webgpu` and
  * `webmcp` are launch settings of the browser the harness launched (open's,
  * in 0.38.1 mcp.rs), and webmcp is part of how a call joins it, so a call
- * that changes it makes agent-browser rejoin; `extraArgs` is raw CLI
- * parity — any flag at all, including those.
+ * that changes it makes agent-browser rejoin; `session` and `namespace` name
+ * the daemon a call joins, which is the harness's browser only when the call
+ * leaves them to the environment; `caCert` and `clearCaCert` are the launched
+ * browser's certificate trust; `extraArgs` is raw CLI parity — any flag at
+ * all, including those. agent-browser advertises session, namespace, caCert
+ * and clearCaCert on every tool: they were a quarter of the tokens a case
+ * agent's model turn reads (measured).
  */
 export const HARNESS_OWNED_ARGUMENTS = Object.freeze([
   "cdp",
+  "session",
+  "namespace",
+  "caCert",
+  "clearCaCert",
   "headed",
   "webgpu",
   "webmcp",

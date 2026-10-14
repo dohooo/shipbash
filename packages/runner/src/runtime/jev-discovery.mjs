@@ -53,7 +53,6 @@ export function jevDiscoveryTool(options) {
           signal,
           redact: options.redact,
           choose: options.choose,
-          judge: options.judge,
           readTerminal: options.readTerminal,
           shouldYield: () => options.stopping?.() || options.revision?.() !== initialRevision,
           onDecision: options.onDecision,

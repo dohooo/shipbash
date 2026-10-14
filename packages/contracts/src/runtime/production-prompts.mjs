@@ -13,6 +13,7 @@ import {
 	HOOK_COMMON_INSTRUCTIONS,
 	buildCaseProductionPrompt,
 	buildCodeEvidenceProductionPrompt,
+	caseJourneyLines,
 	CASE_COMMON_INSTRUCTIONS,
 	CODE_EVIDENCE_COMMON_INSTRUCTIONS,
 	boundRepositoryLine,
@@ -427,6 +428,11 @@ export function buildCaseProductionPromptForRuntime(
 ) {
 	assertCaseContractsCurrent(suite);
 	return buildCaseProductionPrompt(suite, testCase, initialChecklist);
+}
+
+/** The Journey's own part of a case brief (production-prompts-case.mjs caseJourneyLines), as Jev reads it. */
+export function caseJourneyBriefForRuntime(suite, testCase) {
+	return caseJourneyLines(suite, testCase).join("\n");
 }
 
 export function buildCodeEvidenceProductionPromptForRuntime(
