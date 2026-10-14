@@ -73,7 +73,7 @@ const typesUnquoted = (step) => !step.remembered && (step.needsText === null || 
 const needsAction = (step) => step.needsAction === null || step.needsAction >= NO_ACTION_BELOW;
 
 /** The step the walk is on: the last one an action was taken for, or the first. */
-export function currentStep(ledger) {
+function currentStep(ledger) {
   return ledger.steps.findLast((step) => step.actions.length > 0) ?? ledger.steps[0];
 }
 

@@ -97,8 +97,8 @@ async function runSupportedCase(options, config, deps) {
       jev: agentServices(config.env).jev,
       signal,
       call,
-      // The route and the known pages, as the case agent read them (history-records.mjs readCaseMemory).
-      ...config.memory,
+      // The route of the case's newest passing walk, as the case agent read it (history-records.mjs readCaseRoute).
+      route: config.route,
       // The walk's last step keeps its picture before the walk is over (suite-runner/case-evidence-gate.mjs).
       settle: () => config.onToolEvent?.({ type: JEV_SETTLE_PICTURE }),
       choose: deps.choose,

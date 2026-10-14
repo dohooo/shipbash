@@ -8,7 +8,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { KNOWN_PAGES_FILE } from "@shipbash/contracts/runtime/known-pages.mjs";
 
 /** Where the host writes the openings, beneath the control root. */
 export const HISTORY_DIRECTORY = "history";
@@ -122,15 +121,10 @@ export async function readThisRunWalks(paths, fs = { readdir, readFile }) {
   return walks.sort((left, right) => String(right.entry.recordedAt).localeCompare(String(left.entry.recordedAt)));
 }
 
-/**
- * What a case's walk knows of the product before it starts: the route of its
- * newest passing walk, as its opening carries it, and the pages the Project's
- * knowledge knows (control-plane agent-data/opening.ts). Each is empty when
- * the host wrote none.
- */
-export async function readCaseMemory(paths, read = readFile) {
-  const [opening, pages] = await Promise.all([readCaseOpening(paths, read), readJson(join(paths.root, KNOWN_PAGES_FILE), read)]);
-  return { route: Array.isArray(opening?.route) ? opening.route : [], pages: Array.isArray(pages) ? pages : [] };
+/** The route of the case's newest passing walk, as its opening carries it (control-plane agent-data/opening.ts), or none. */
+export async function readCaseRoute(paths, read = readFile) {
+  const opening = await readCaseOpening(paths, read);
+  return Array.isArray(opening?.route) ? opening.route : [];
 }
 
 /** The newest earlier walk of the case being walked, as the host wrote it before the run, or null. */

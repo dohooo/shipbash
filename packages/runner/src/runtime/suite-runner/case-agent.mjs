@@ -11,7 +11,7 @@ import { agentServices, REVIEW_MODEL_CONTRACT } from "@shipbash/contracts/runtim
 import { browserGoneCaseResult, browserUnresponsiveCaseResult, timedOutCaseResult, unfinishedSupervisionResult } from "../case-verdicts.mjs";
 import { buildCaseProductionPromptForRuntime, buildCodeEvidenceProductionPromptForRuntime } from "@shipbash/contracts/runtime/production-prompts.mjs";
 import { startNarrationReader } from "../recording-narration.mjs";
-import { historyPathsFrom, readCaseMemory } from "../history-records.mjs";
+import { historyPathsFrom, readCaseRoute } from "../history-records.mjs";
 import { progressOptions } from "../progress-session.mjs";
 import { caseOpeningNote } from "../history-tools.mjs";
 import { isJevCall } from "../jev-tools.mjs";
@@ -167,10 +167,10 @@ function caseToolWatch(walk) {
   };
 }
 
-/** The note the brief opens with when this case has history, or null, and what Jev's walk knows of the product (readCaseMemory). */
+/** The note the brief opens with when this case has history, or null, and the route of its newest passing walk (Jev's). */
 function caseHistory(testCase) {
   const paths = historyPathsFrom({ controlRoot: CONTROL_ROOT, outputRoot: OUTPUT_ROOT, caseId: testCase.id });
-  return paths ? Promise.all([caseOpeningNote(paths, { hook: isHook(testCase) }), readCaseMemory(paths)]) : [null, { route: [], pages: [] }];
+  return paths ? Promise.all([caseOpeningNote(paths, { hook: isHook(testCase) }), readCaseRoute(paths)]) : [null, []];
 }
 
 /**
@@ -218,7 +218,7 @@ export async function runCase(
     serviceTier: agentServices(process.env).model.serviceTier ?? undefined, surface: isHook(testCase) ? "hook" : "case" };
   emit("agent", "agent_model_selected", { ...context, ...selection, message: "Case agent configuration recorded." });
   const { narrationPath, progressPath, progress } = caseProgress(resultPath, initialChecklist, testCase.id, terminal);
-  const [historyNote, memory] = await caseHistory(testCase);
+  const [historyNote, route] = await caseHistory(testCase);
   const progressReader = await startChecklistProgressReader(progressPath, context, initialChecklist);
   const narrationReader = await startNarrationReader(narrationPath, onNarration);
   const pointerReader = startCasePointerReader(context, onPointer);
@@ -255,7 +255,7 @@ export async function runCase(
         // Each model response's tokens, under the selection the walk announced.
         onUsage: (counts) => emit("agent", "agent_usage", { ...context, ...selection, ...counts }),
       }, {
-        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk, memory,
+        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk, route,
         onToolEvent: gate.jevToolEvents(tooling.sources),
         readTerminal: () => terminal?.screen() ?? null,
       });
