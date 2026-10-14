@@ -59,7 +59,6 @@ export async function prepareSuiteRuntime(
       authDirectory: configuration.authDirectory,
       projectHash: projectHash(input.job.projectId),
       caseOpenings: opening.earlierWalks,
-      knownPages: opening.knownPages,
       onOutputDirectoryReady: (directory) => { outputRoot = directory; },
       ...(trustedAccess ? { trustedAccess } : {}),
     },

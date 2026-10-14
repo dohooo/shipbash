@@ -7,9 +7,8 @@ import { splitWaiting } from "./action-requests.mjs";
 import { chooseJevAction, closingOptions, judgeJevCheckpoint, pageOptions } from "./jev-actions.mjs";
 import { judge, record, settle, stepRemains } from "./jev-checklist.mjs";
 import { readSteps, whichStep } from "./jev-step-questions.mjs";
-import { attribute, currentStep, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
+import { attribute, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
 import { checkInterruption, movedFrom, readPage, waitOut } from "./jev-page-reading.mjs";
-import { withKnownPages } from "./jev-known-pages.mjs";
 import { withRoute } from "./jev-route.mjs";
 import { interruption, JEV_REASONS } from "./jev-stops.mjs";
 import { terminalOptions } from "./jev-terminal.mjs";
@@ -149,12 +148,8 @@ const outcome = (code, waited = false) => ({ code, waited });
 async function advance(run, state) {
   // A page Jev must not act on hands the walk back whole: the steps after it,
   // the terminal's included, are the supervising agent's.
-  // What the Journey's newest passing walk did on this page (jev-route.mjs) and
-  // the known pages the step it is on, or the next, is after (jev-known-pages.mjs) join the options.
-  const routed = withRoute(pageOptions(state.page, run.values), state, run.route, run.routeNext);
-  const step = currentStep(run.ledger);
-  const ahead = [step, run.ledger.steps[step.number]].filter(Boolean).map((each) => each.instruction).join(" ");
-  const page = withKnownPages(routed, state, run.pages, ahead);
+  // What the Journey's newest passing walk did on this page joins the options (jev-route.mjs).
+  const page = withRoute(pageOptions(state.page, run.values), state, run.route, run.routeNext);
   if (!page) return outcome("unsupported_options");
   // Terminal steps are offered only to a caller that reads a terminal (readTerminal).
   const terminal = run.readTerminal ? terminalOptions(run.terminalSteps, state.terminal?.sessionId ?? null) : [];

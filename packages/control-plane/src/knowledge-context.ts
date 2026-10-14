@@ -3,8 +3,6 @@
  * line it reads, and the page notes the browser proxy serves. What a run
  * opens on, and the recall corpus behind it, is knowledge-opening.ts.
  */
-import type { KnownPage } from "@shipbash/contracts/runtime/known-pages.mjs";
-
 import type { ProductKnowledgeRecord } from "./knowledge.ts";
 import type { KnowledgeLine } from "./knowledge-corpus.ts";
 
@@ -59,25 +57,6 @@ export function knowledgeEntryLine(entry: ProductKnowledgeRecord): string {
     return `${oneLine(body.context, 160)} → chose ${oneLine(body.chose, 120)} (${confirmed})`;
   }
   return `${oneLine(body.capability, 160)}: ${oneLine(body.how, 300)}`;
-}
-
-// How many known pages a Suite Run is handed (contracts runtime/known-pages.mjs).
-const KNOWN_PAGES = 80;
-
-/**
- * The pages the entries know, by title, URL and purpose, for Jev to open
- * (contracts runtime/known-pages.mjs): one per URL, its earliest entry, which
- * is usually the survey's, before later walks wrote the same page again under
- * titles of their own.
- */
-export function knownPages(entries: readonly ProductKnowledgeRecord[]): KnownPage[] {
-  const pages = new Map<string, KnownPage>();
-  for (const entry of [...entries].sort((left, right) => left.createdAt.localeCompare(right.createdAt))) {
-    const body: Record<string, unknown> = entry.body;
-    if (entry.kind !== "page" || typeof body.url !== "string" || pages.has(body.url)) continue;
-    pages.set(body.url, { title: oneLine(entry.title, 120), url: body.url, purpose: oneLine(body.purpose, 200) });
-  }
-  return [...pages.values()].slice(0, KNOWN_PAGES);
 }
 
 /** The page notes the browser proxy serves, derived from the same entries. */

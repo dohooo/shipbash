@@ -8,7 +8,6 @@ import { join } from "node:path";
 
 import { type TaskApiConfig, writeTaskApiConfig } from "@shipbash/contracts/runtime/job-api.mjs";
 
-import type { KnownPage } from "@shipbash/contracts/runtime/known-pages.mjs";
 import { writeCaseOpenings } from "../agent-data/opening.ts";
 import type { RunHistoryWalk } from "../run-history.ts";
 import {
@@ -27,7 +26,6 @@ export interface SuiteRuntimeOptions {
   temporaryDirectory?: string;
   trustedAccess?: TrustedAccessRuntimeConfig | null;
   caseOpenings?: Record<string, RunHistoryWalk>;
-  knownPages?: KnownPage[];
 }
 
 export interface SuiteRuntimeLayout {
@@ -83,7 +81,7 @@ export async function prepareSuiteRuntimeLayout(
     },
   );
   await writeRunCodexConfig(inputDirectory);
-  if (options.caseOpenings || options.knownPages) await writeCaseOpenings(controlDirectory, options.caseOpenings ?? {}, options.knownPages ?? []);
+  if (options.caseOpenings) await writeCaseOpenings(controlDirectory, options.caseOpenings);
   const { trustedAccess, trustedAccessDirectory } = await prepareTrustedAccessDirectory(
     join(runtimeDirectory, "trusted-access"),
     options.trustedAccess,
