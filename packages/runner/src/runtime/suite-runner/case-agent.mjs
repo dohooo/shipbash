@@ -11,11 +11,10 @@ import { agentServices, REVIEW_MODEL_CONTRACT } from "@shipbash/contracts/runtim
 import { browserGoneCaseResult, browserUnresponsiveCaseResult, timedOutCaseResult, unfinishedSupervisionResult } from "../case-verdicts.mjs";
 import { buildCaseProductionPromptForRuntime, buildCodeEvidenceProductionPromptForRuntime } from "@shipbash/contracts/runtime/production-prompts.mjs";
 import { startNarrationReader } from "../recording-narration.mjs";
-import { historyPathsFrom } from "../history-records.mjs";
+import { historyPathsFrom, readCaseMemory } from "../history-records.mjs";
 import { progressOptions } from "../progress-session.mjs";
 import { caseOpeningNote } from "../history-tools.mjs";
 import { isJevCall } from "../jev-tools.mjs";
-import { evidenceStop } from "../jev-stops.mjs";
 import { NOT_RETAINED } from "../evidence-recorder.mjs";
 
 import {
@@ -32,6 +31,7 @@ import { AGENT_ABORT_CANCEL, AGENT_ABORT_TIMEOUT, createAgentBudget, runPiAgent 
 import { runJevCaseAgent } from "../jev-verification.mjs";
 import { scenarioPrompt } from "@shipbash/contracts/runtime/pi-session-prompts.mjs";
 import { BROWSER_SOURCE, buildCasePrompt, piLifecycleProjector } from "./agent-lifecycle.mjs";
+import { BROWSER_UNRESPONSIVE, caseEvidenceGate } from "./case-evidence-gate.mjs";
 import { BROWSER_GONE } from "./case-source-watch.mjs";
 import { caseGitHub } from "./case-github.mjs";
 import { createCaseTooling, watchExtensionTools } from "./case-tooling.mjs";
@@ -154,57 +154,6 @@ export function caseAgentTimeoutMs(testCase) {
   return isHook(testCase) ? HOOK_AGENT_TIMEOUT_MS : JOURNEY_AGENT_TIMEOUT_MS;
 }
 
-/** The reason a walk whose browser stopped answering aborts with (caseEvidenceGate). */
-const BROWSER_UNRESPONSIVE = "browser_unresponsive";
-
-/**
- * Jev acts and judges only while the harness is recording the walk. Its
- * checkpoint verdicts are made from a text snapshot, and the step screenshots
- * retained beside them are the evidence the owner sees for each one. A Jev
- * step whose picture was not retained stops the walk before its next input or
- * verdict, for why it has none
- * (evidence-frames.mjs): the recording lost it, and the supervising agent
- * continues the attempt; the browser is gone, and the sidecar's watch has
- * already stopped the attempt (case-source-watch.mjs); or the step failed on
- * a browser silent past the bound. That last one stops the attempt whoever
- * took the step, Jev or the supervising agent: ShipBash's browser has stopped
- * answering, and no agent is left to wait on it.
- * @param {Record<string, unknown>} context the case identity events carry
- * @param {{ abort: (reason: string) => void, signal: AbortSignal }} budget the walk's
- * @param {(completion: object) => Promise<true | import("../evidence-frames.mjs").StepMissing> | undefined} onToolCompleted
- *   the lane's capture of a completed tool: a browser step's answer, or nothing for any other tool
- */
-function caseEvidenceGate(context, budget, onToolCompleted) {
-  /** @type {{ silentMs: number } | null} */
-  let silence = null;
-  const capture = (completion) => {
-    const captured = onToolCompleted(completion);
-    void captured?.then((missing) => {
-      if (missing === true || missing.reason !== BROWSER_UNRESPONSIVE || budget.signal.aborted) return;
-      silence = missing;
-      budget.abort(BROWSER_UNRESPONSIVE);
-    });
-    return captured;
-  };
-  return {
-    capture,
-    /** How long the browser had not answered when a step stopped the attempt for it. */
-    silentMs: () => silence?.silentMs ?? 0,
-    /** Jev's tool events, projected as its own agent's: a browser step without its picture stops the walk. */
-    jevToolEvents(sources) {
-      let captured;
-      const lifecycle = piLifecycleProjector(context, sources, (completion) => { captured = capture(completion); });
-      return async (event) => {
-        captured = undefined;
-        lifecycle(event);
-        const missing = await captured;
-        if (event.type !== "tool_execution_end" || sources.get(event.toolName) !== BROWSER_SOURCE || missing === true) return;
-        throw evidenceStop(missing);
-      };
-    },
-  };
-}
-
 /** Every tool result reaches the walk's step record, with who made the call. */
 function caseToolWatch(walk) {
   return (_server, tool, text, call) => {
@@ -218,10 +167,10 @@ function caseToolWatch(walk) {
   };
 }
 
-/** The note the brief opens with when this case has history, or null. */
-function caseHistoryNote(testCase) {
+/** The note the brief opens with when this case has history, or null, and what Jev's walk knows of the product (readCaseMemory). */
+function caseHistory(testCase) {
   const paths = historyPathsFrom({ controlRoot: CONTROL_ROOT, outputRoot: OUTPUT_ROOT, caseId: testCase.id });
-  return paths ? caseOpeningNote(paths, { hook: isHook(testCase) }) : null;
+  return paths ? Promise.all([caseOpeningNote(paths, { hook: isHook(testCase) }), readCaseMemory(paths)]) : [null, { route: [], pages: [] }];
 }
 
 /**
@@ -269,7 +218,7 @@ export async function runCase(
     serviceTier: agentServices(process.env).model.serviceTier ?? undefined, surface: isHook(testCase) ? "hook" : "case" };
   emit("agent", "agent_model_selected", { ...context, ...selection, message: "Case agent configuration recorded." });
   const { narrationPath, progressPath, progress } = caseProgress(resultPath, initialChecklist, testCase.id, terminal);
-  const historyNote = await caseHistoryNote(testCase);
+  const [historyNote, memory] = await caseHistory(testCase);
   const progressReader = await startChecklistProgressReader(progressPath, context, initialChecklist);
   const narrationReader = await startNarrationReader(narrationPath, onNarration);
   const pointerReader = startCasePointerReader(context, onPointer);
@@ -306,7 +255,7 @@ export async function runCase(
         // Each model response's tokens, under the selection the walk announced.
         onUsage: (counts) => emit("agent", "agent_usage", { ...context, ...selection, ...counts }),
       }, {
-        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk,
+        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk, memory,
         onToolEvent: gate.jevToolEvents(tooling.sources),
         readTerminal: () => terminal?.screen() ?? null,
       });

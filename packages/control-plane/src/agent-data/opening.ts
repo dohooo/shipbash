@@ -19,6 +19,8 @@ import { join } from "node:path";
 import type postgres from "postgres";
 
 import { activityKnowledgeSurface, HOST_KINDS } from "@shipbash/contracts/runtime/discovery-surface.mjs";
+import { type KnownPage, KNOWN_PAGES_FILE } from "@shipbash/contracts/runtime/known-pages.mjs";
+import type { RouteAction } from "@shipbash/contracts/runtime/walk-route.mjs";
 import { CASE_OPENINGS_FILE, HISTORY_DIRECTORY } from "@shipbash/runner/runtime/history-tools.mjs";
 
 import type { ActivityControlSeed, QueuedActivitySteer } from "../activity-control-files.ts";
@@ -39,7 +41,7 @@ import type {
   DispatchJobLeaseCapability,
   SuiteExecutionInput,
 } from "../types.ts";
-import { latestHistoryNote, newestWalks } from "./history.ts";
+import { latestHistoryNote, newestWalks, passingRoutes } from "./history.ts";
 import { type SignedSteer, fetchSteerImages } from "./steer-images.ts";
 
 type ArtifactReads = Pick<SupabaseArtifactStorage, "downloadObject"> | null;
@@ -71,6 +73,8 @@ export interface SuiteRunOpening {
   account: OpeningAccount;
   /** The newest earlier walk of each Journey and hook, by its snapshot Case id. */
   earlierWalks: Record<string, RunHistoryWalk>;
+  /** The pages the Project's knowledge knows, for Jev to open (contracts runtime/known-pages.mjs). */
+  knownPages: KnownPage[];
 }
 
 /** An Activity leg's opening, for the job `capability` holds, as the record stood when it was claimed. */
@@ -117,11 +121,15 @@ export async function suiteRunOpening(
   const { asOf } = await agentDataScope(store.sql, input.capability);
   const owner = { teamId: execution.job.teamId, projectId: execution.job.projectId };
   const scope: HistoryScope = { ...owner, activityId: null, suiteRunId: execution.suiteRunId, asOf };
-  const [knowledge, earlierWalks] = await Promise.all([
+  const reader = { sql: store.sql, storage, scope, caseId: null, links: null };
+  const [knowledge, newest, routes] = await Promise.all([
     loadRunKnowledge((query) => store.internal.listKnowledgeEntriesInternal({ ...query, asOf }), owner, execution.testingContext),
-    newestWalks({ sql: store.sql, storage, scope, caseId: null, links: null }).catch(() => ({})),
+    newestWalks(reader).catch((): Record<string, RunHistoryWalk> => ({})),
+    passingRoutes(reader).catch((): Record<string, RouteAction[]> => ({})),
   ]);
-  return { testingContext: knowledge.opening, account: knowledge.account, earlierWalks };
+  // Each case's opening: its newest walk, with the route of its newest passing walk.
+  const earlierWalks = Object.fromEntries(Object.entries(newest).map(([caseId, walk]) => [caseId, routes[caseId] ? { ...walk, route: routes[caseId] } : walk]));
+  return { testingContext: knowledge.opening, account: knowledge.account, earlierWalks, knownPages: knowledge.knownPages };
 }
 
 /** What the leg's control mount starts with, from its opening (activity-control-files.ts). */
@@ -164,9 +172,10 @@ export async function openSuiteRun(
   return opening;
 }
 
-/** Writes a run's case openings where the runner's case agents read them (history-records.mjs readCaseOpening). */
-export async function writeCaseOpenings(controlDirectory: string, walks: Record<string, RunHistoryWalk>): Promise<void> {
+/** Writes a run's case openings and known pages where the runner's case agents read them (history-records.mjs readCaseMemory). */
+export async function writeCaseOpenings(controlDirectory: string, walks: Record<string, RunHistoryWalk>, pages: KnownPage[]): Promise<void> {
   const directory = join(controlDirectory, HISTORY_DIRECTORY);
   await mkdir(directory, { recursive: true });
   await writeFile(join(directory, CASE_OPENINGS_FILE), `${JSON.stringify(walks)}\n`, { mode: 0o600 });
+  await writeFile(join(directory, KNOWN_PAGES_FILE), `${JSON.stringify(pages)}\n`, { mode: 0o600 });
 }

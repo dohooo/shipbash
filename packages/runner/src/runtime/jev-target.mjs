@@ -48,7 +48,7 @@ function parseLine(line) {
 }
 
 /** The snapshot outline with each node's enclosing node; a native select owns a MenuListPopup. */
-function parseControls(snapshot) {
+export function parseControls(snapshot) {
   /** @type {Control[]} */
   const controls = [];
   /** @type {Control[]} */
@@ -85,7 +85,7 @@ const within = (control) => {
 };
 
 /** @returns {JevOption} */
-function browserOption(ref, description, tool, args) {
+export function browserOption(ref, description, tool, args) {
   return { ref, description, tool, args };
 }
 

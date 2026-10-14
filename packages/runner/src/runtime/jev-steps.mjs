@@ -11,7 +11,7 @@ import { JEV_REASONS } from "./jev-stops.mjs";
 import { terminalSteps, withoutCodeSpans } from "./jev-terminal.mjs";
 
 /**
- * @typedef {{ number: number, id: string, instruction: string, values: string[], commands: string[], inputs: string[], keys: string[], needsText: number | null, needsAction: number | null, actions: string[], pressed: string[] }} LedgerStep
+ * @typedef {{ number: number, id: string, instruction: string, values: string[], commands: string[], inputs: string[], keys: string[], needsText: number | null, needsAction: number | null, actions: string[], pressed: string[], remembered?: boolean }} LedgerStep
  * @typedef {{ code: "step_needs_text" | "step_skipped" | "steps_not_taken", step: LedgerStep }} HandBack
  * @typedef {{ steps: LedgerStep[], handedBack: HandBack | null, completed: boolean }} Ledger
  */
@@ -66,12 +66,14 @@ export function readInto(ledger, { needsText, needsAction }) {
 }
 
 /** Whether a step types text it does not give; unanswered counts as yes. */
-const typesUnquoted = (step) => step.needsText === null || step.needsText >= NEEDS_TEXT_AT;
+// A step that types text it does not quote, unless the walk typed for it what the Journey's newest passing walk
+// typed there (jev-route.mjs: a remembered value).
+const typesUnquoted = (step) => !step.remembered && (step.needsText === null || step.needsText >= NEEDS_TEXT_AT);
 /** Whether a step needs an action of its own; unanswered or unsure counts as yes. */
 const needsAction = (step) => step.needsAction === null || step.needsAction >= NO_ACTION_BELOW;
 
 /** The step the walk is on: the last one an action was taken for, or the first. */
-function currentStep(ledger) {
+export function currentStep(ledger) {
   return ledger.steps.findLast((step) => step.actions.length > 0) ?? ledger.steps[0];
 }
 
@@ -84,7 +86,7 @@ function currentStep(ledger) {
  * typed and stops Send code. A step that needs an action and has none stops
  * every step after it.
  * @param {Ledger} ledger
- * @param {{ args?: Record<string, unknown> }} action
+ * @param {{ args?: Record<string, unknown>, remembered?: boolean }} action a remembered value (jev-route.mjs) may stand for a step's unquoted text
  * @returns {HandBack | null}
  */
 export function refuse(ledger, number, action) {
@@ -95,7 +97,9 @@ export function refuse(ledger, number, action) {
   /** @type {HandBack | null} */
   const handBack = blocking
     ? { code: typesUnquoted(blocking) ? "step_needs_text" : "step_skipped", step: blocking }
-    : typesUnquoted(step) && stepTyping(ledger, action) !== step.number ? { code: "step_needs_text", step } : null;
+    : typesUnquoted(step) && stepTyping(ledger, action) !== step.number && !action.remembered ? { code: "step_needs_text", step } : null;
+  // A remembered value typed for a step that types unquoted text is that step's text from now on.
+  if (!handBack && action.remembered && typesUnquoted(step)) step.remembered = true;
   if (handBack) ledger.handedBack = handBack;
   return handBack;
 }

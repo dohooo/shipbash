@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import type { TaskApiConfig } from "@shipbash/contracts/runtime/job-api.mjs";
+import type { KnownPage } from "@shipbash/contracts/runtime/known-pages.mjs";
 import { toolProcessEnvironment } from "../tool-environment.ts";
 import {
   releaseTrustedAccessFileWhenConsumed,
@@ -40,6 +41,8 @@ export interface DockerRuntimeOptions {
   trustedAccess?: TrustedAccessRuntimeConfig | null;
   /** Each Case's newest earlier walk, which its brief opens with, written into control/history/ (agent-data/opening.ts). */
   caseOpenings?: Record<string, RunHistoryWalk>;
+  /** The pages the Project's knowledge knows, written beside the case openings (agent-data/opening.ts). */
+  knownPages?: KnownPage[];
   /** Host-created output root, announced before Runner events can arrive. */
   onOutputDirectoryReady?: (directory: string) => void;
   /** Drains evidence readers before a failed runtime removes its output root. */

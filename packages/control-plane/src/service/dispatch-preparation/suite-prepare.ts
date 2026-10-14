@@ -126,6 +126,7 @@ export function createPrepareSuite(
         onOutputDirectoryReady: recording.onOutputDirectoryReady,
         ...(trustedAccess ? { trustedAccess } : {}),
         caseOpenings: opening.earlierWalks,
+        knownPages: opening.knownPages,
       },
       retainCaseRecording: recording.retainCaseRecording,
       failCaseRecording: recording.failCaseRecording,
