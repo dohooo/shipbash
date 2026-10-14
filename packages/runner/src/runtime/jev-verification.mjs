@@ -66,12 +66,15 @@ function checkpointReport(checkpoint, journey) {
  * where Jev left the walk, and on a Journey's contradicted checkpoint, that
  * the verdict on it is the agent's.
  */
-function handoffPrompt(prompt, result, contradicted) {
+function handoffPrompt(prompt, result, contradicted, firstWalk) {
   const checkpoint = contradicted ? result.checklist.find((item) => item.status === "failed") : null;
   const verdict = checkpoint
     ? ` Jev read checkpoint ${checkpoint.id} as contradicted by the page and reported it in_progress. Its verdict is yours: judge that checkpoint, and whether each of the Journey's preconditions held when the walk began. A precondition did not hold only when the walk saw that state itself; this checkpoint failing is never that sighting.`
     : "";
-  return `${prompt}\nContinue this SAME attempt from its current page. Inspect before acting; never replay completed or uncertain operations.${verdict} ${stepsSummary(result.steps)} Retained progress and observations:\n${jevJson(supervisorRecord(result), redact)}`;
+  const first = checkpoint && firstWalk
+    ? ` This walk is the reproduction of a first walk, from a clean start, in which Jev observed: ${firstWalk.failureReason ?? firstWalk.summary}. No one judged that first walk: your verdict on this one settles the Journey.`
+    : "";
+  return `${prompt}\nContinue this SAME attempt from its current page. Inspect before acting; never replay completed or uncertain operations.${verdict}${first} ${stepsSummary(result.steps)} Retained progress and observations:\n${jevJson(supervisorRecord(result), redact)}`;
 }
 
 async function runSupportedCase(options, config, deps) {
@@ -128,17 +131,27 @@ async function runSupportedCase(options, config, deps) {
   // reported the CLI's "Status: Logged in" as a product failure. A hook's
   // preconditions never gate its verdict, so its failure stays Jev's.
   const contradicted = result.status === "failed" && journey;
+  // A first walk's contradicted checkpoint is walked again from a clean start
+  // before anyone judges it (journey-confirmation.mjs): the supervising agent
+  // judges once, on the reproduction, with what this walk observed. A
+  // reproduction that passes clears it, as a re-run that passes always has.
+  if (contradicted && !config.firstWalk) return deliverJevDocument(options, call, result);
   if (result.status === "handoff" || contradicted) {
     await config.walk?.handoff(result.reason);
     // The handoff continues on the caller's own signal: the same budget, the
     // same cancel sentinel, no second clock to disagree with the first.
-    const supervised = await (deps.runAgent ?? runPiAgent)({ ...options, prompt: handoffPrompt(options.prompt, result, contradicted) });
+    const supervised = await (deps.runAgent ?? runPiAgent)({ ...options, prompt: handoffPrompt(options.prompt, result, contradicted, config.firstWalk) });
     // A supervising turn that ends undelivered — its time ran out, the model
     // gateway or the browser failed — hands its caller Jev's observed failure,
     // which the caller weighs against what was reported since
     // (case-verdicts.mjs unfinishedSupervisionResult).
     return contradicted && !supervised.delivered ? { ...supervised, observed: documentFrom(result) } : supervised;
   }
+  return deliverJevDocument(options, call, result);
+}
+
+/** Jev's own result, reported and written as the walk's. */
+async function deliverJevDocument(options, call, result) {
   const document = documentFrom(result);
   await call("report_checklist", {
     updates: document.checklist.map(({ id, status, reason }) => ({ id, status, ...(reason ? { reason } : {}) })),

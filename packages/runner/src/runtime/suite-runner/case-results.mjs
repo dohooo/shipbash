@@ -2,6 +2,8 @@
 // result, the code-evidence result, and the checklist progress channel —
 // with the reconciliation that anchors an agent's report to what the
 // progress channel actually saw.
+import { readFileSync } from "node:fs";
+
 import { isRecord, positiveInteger, requiredString } from "@shipbash/contracts/runtime/contract-values.mjs";
 import {
   TERMINAL_STATUSES,
@@ -139,6 +141,33 @@ export function reconcileCaseAgentResult(validated, reported, initialChecklist =
   });
   validated.checklist = reconciled;
   return validated;
+}
+
+/**
+ * Why a delivered document would be rejected against what the walk has
+ * reported so far (reconcileCaseAgentResult), or null when it would be
+ * accepted: read before the document is taken, so the agent can deliver again.
+ * @param {string} progressPath the progress channel's file
+ */
+export function deliveryRefusal(progressPath, initialChecklist = null) {
+  return (document) => {
+    let checklist = initialChecklist ? validateChecklistItems(initialChecklist) : null;
+    let revision = 0;
+    try {
+      for (const line of readFileSync(progressPath, "utf8").split("\n").filter(Boolean)) {
+        revision += 1;
+        checklist = parseChecklistProgressEvent(line, checklist, revision);
+      }
+    } catch {
+      return null; // no readable report yet: the reconciliation after the run decides, as before
+    }
+    try {
+      reconcileCaseAgentResult(validateCaseResult(structuredClone(document)), { checklist, revision }, initialChecklist);
+      return null;
+    } catch (error) {
+      return `${error instanceof Error ? error.message : String(error)} Report the checkpoint again with report_checklist if your evidence changed, then deliver.`;
+    }
+  };
 }
 
 export function parseChecklistProgressEvent(line, previousChecklist = null, expectedRevision = 1) {

@@ -36,6 +36,7 @@ import { BROWSER_GONE } from "./case-source-watch.mjs";
 import { caseGitHub } from "./case-github.mjs";
 import { createCaseTooling, watchExtensionTools } from "./case-tooling.mjs";
 import {
+  deliveryRefusal,
   reconcileCaseAgentResult,
   sameChecklist,
   startChecklistProgressReader,
@@ -260,6 +261,8 @@ export async function runCase(
   terminal = null,
   // The attempt's credential control, which answers get_credentials.
   credentials = null,
+  // On a reproduction, the first walk's result (journey-confirmation.mjs).
+  firstWalk = null,
 ) {
   const context = { caseRunId, caseId: testCase.id, attempt, executionRound };
   const selection = { model: suite.modelContract.model, reasoningEffort: suite.modelContract.reasoningEffort,
@@ -285,6 +288,7 @@ export async function runCase(
       const lifecycle = piLifecycleProjector(context, tooling.sources, gate.capture);
       result = await runJevCaseAgent({
         modelContract: suite.modelContract,
+        deliveryRefusal: deliveryRefusal(progressPath, initialChecklist),
         systemInstructions: systemPrompt,
         appendSystemPrompt,
         prompt: buildCasePrompt(brief, historyNote),
@@ -302,7 +306,7 @@ export async function runCase(
         // Each model response's tokens, under the selection the walk announced.
         onUsage: (counts) => emit("agent", "agent_usage", { ...context, ...selection, ...counts }),
       }, {
-        testCase, constraints: brief, env, context, initialChecklist, walk,
+        testCase, constraints: brief, env, context, initialChecklist, walk, firstWalk,
         onToolEvent: gate.jevToolEvents(tooling.sources),
         readTerminal: () => terminal?.screen() ?? null,
       });
