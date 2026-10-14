@@ -169,16 +169,17 @@ async function finishCaseAttempt(context, { budget, walk, attemptResult, laneBro
 
 /**
  * One execution round of a case, its time added to the case's walking time
- * (state.mjs takeWalkMs), whatever way the round ends.
+ * (state.mjs takeWalkMs), whatever way the round ends. A reproduction carries
+ * the first walk's result (`firstWalk`), which its supervising agent reads.
  */
 export async function executeCaseAttempt(
   suite, testCase, caseRunId, attempt, executionRound, statePath,
-  initialChecklist = null, signInWriteback = null,
+  initialChecklist = null, signInWriteback = null, firstWalk = null,
 ) {
   const started = performance.now();
   try {
     return await walkCaseAttempt(
-      suite, testCase, caseRunId, attempt, executionRound, statePath, initialChecklist, signInWriteback,
+      suite, testCase, caseRunId, attempt, executionRound, statePath, initialChecklist, signInWriteback, firstWalk,
     );
   } finally {
     addWalkTime(caseRunId, performance.now() - started);
@@ -187,7 +188,7 @@ export async function executeCaseAttempt(
 
 async function walkCaseAttempt(
   suite, testCase, caseRunId, attempt, executionRound, statePath,
-  initialChecklist, signInWriteback,
+  initialChecklist, signInWriteback, firstWalk,
 ) {
   const { artifactDirectory, agentWorkDirectory, resultPath, env } = await prepareCaseAttemptWorkspace(
     caseRunId,
@@ -274,7 +275,7 @@ async function walkCaseAttempt(
       initialChecklist,
       (cue) => capture.caption(cue),
       (pointer) => capture.point(pointer),
-      budget, onToolCompleted, walk, terminalLane, credentialControl,
+      budget, onToolCompleted, walk, terminalLane, credentialControl, firstWalk,
     );
     const caseResult = endedWith(reportEntryCheckRefusal(entryCheck, context, await agentExecution));
     await credentialControl?.reportOutcome(testCase.id, caseResult, safeError);

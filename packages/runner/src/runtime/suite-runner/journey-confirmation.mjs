@@ -34,6 +34,8 @@ async function reproduceFailure(options) {
     validationRound + 2,
     activeStatePath,
     anchoredChecklist,
+    null,
+    originalFailure,
   );
   const result = reconcileReproduction(originalFailure, reproduction);
   emit("case", result.outcome === "failed" ? "case_reproduction_confirmed" : "case_reproduction_cleared", {

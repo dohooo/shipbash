@@ -92,7 +92,7 @@ function checkInput(check: PasswordCheck, browser: OpenedTakeoverBrowser, browse
         signInPageUrl,
         encryptionKey: browser.encryptionKey,
         browserCdpUrl,
-        modelContract: modelContractFor("verification"),
+        modelContract: modelContractFor("sign_in"),
       },
       environment: {
         ...signInLegEnvironment({ mode: "sign-in-login", projectHash: projectDigest(request.projectId) }),

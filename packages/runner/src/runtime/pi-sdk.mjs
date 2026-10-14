@@ -187,11 +187,15 @@ export function subscribeResponseFailure(session, onFailure) {
 
 /**
  * The `deliver` tool: the schema is the parameters, so pi enforces the shape.
+ * A caller's `refusal` names what keeps a document from being accepted; the
+ * agent hears it as the tool's error and delivers again, instead of the run
+ * ending on a result the caller would reject afterwards.
  * @param {Record<string, unknown>} schema
  * @param {(params: Record<string, unknown>) => void} capture
  * @param {string} description
+ * @param {(params: Record<string, unknown>) => string | null} [refusal]
  */
-export function deliverTool(schema, capture, description) {
+export function deliverTool(schema, capture, description, refusal = () => null) {
   const { $schema: _meta, ...parameters } = schema;
   return {
     name: "deliver",
@@ -201,6 +205,8 @@ export function deliverTool(schema, capture, description) {
     executionMode: "sequential",
     /** @param {string} _toolCallId @param {Record<string, unknown> | undefined} params */
     execute: async (_toolCallId, params) => {
+      const refused = refusal(params ?? {});
+      if (refused) throw new Error(refused);
       capture(params ?? {});
       return { content: [{ type: "text", text: "Delivered." }], details: undefined, terminate: true };
     },

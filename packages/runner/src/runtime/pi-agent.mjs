@@ -99,6 +99,7 @@ export function sourceTools(source, tools, timeoutMs) {
  *   systemInstructions: string,
  *   appendSystemPrompt?: string[],
  *   deliverDescription?: string,
+ *   deliveryRefusal?: (params: Record<string, unknown>) => string | null,
  *   prompt: string,
  *   schema: Record<string, unknown>,
  *   resultPath: string,
@@ -160,7 +161,7 @@ async function createSession(pi, options, directory, state) {
     session: {
       customTools: [
         ...(options.customTools ?? []),
-        deliverTool(options.schema, (params) => { state.delivered = params; }, options.deliverDescription ?? DELIVER_DESCRIPTION),
+        deliverTool(options.schema, (params) => { state.delivered = params; }, options.deliverDescription ?? DELIVER_DESCRIPTION, options.deliveryRefusal),
       ],
       sessionManager: pi.SessionManager.create(options.cwd, join(directory, "session")),
     },

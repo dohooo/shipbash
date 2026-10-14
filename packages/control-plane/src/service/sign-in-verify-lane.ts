@@ -170,7 +170,7 @@ function signInPageUrl(request: SignInVerifyRequest): string {
 function legConfig(request: SignInVerifyRequest, encryptionKey: string, browser: SignInBrowserLease): Record<string, unknown> {
   const shared = { productionUrl: request.productionUrl, encryptionKey, browserCdpUrl: browser.cdpUrl };
   if (request.credential) {
-    return { ...shared, modelContract: modelContractFor("verification"), signInPageUrl: signInPageUrl(request) };
+    return { ...shared, modelContract: modelContractFor("sign_in"), signInPageUrl: signInPageUrl(request) };
   }
   return { ...shared, useCurrentSession: request.currentSession === true && browser.reused, state: (request.state ?? Buffer.alloc(0)).toString("base64") };
 }
