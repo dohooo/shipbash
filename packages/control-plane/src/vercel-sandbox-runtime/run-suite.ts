@@ -44,7 +44,9 @@ export async function runSuiteInSandbox(
   );
   const inputPath = join(layout.inputDirectory, "suite.json");
   await writeFile(inputPath, `${JSON.stringify(suiteInputForContainer(input))}\n`, { mode: 0o600 });
-  if (runtimeOptions.caseOpenings) await writeCaseOpenings(layout.controlDirectory, runtimeOptions.caseOpenings);
+  if (runtimeOptions.caseOpenings || runtimeOptions.knownPages) {
+    await writeCaseOpenings(layout.controlDirectory, runtimeOptions.caseOpenings ?? {}, runtimeOptions.knownPages ?? []);
+  }
   const humanAuthPassword = randomBytes(24).toString("base64url");
   const sensitiveValues = [
     humanAuthPassword,

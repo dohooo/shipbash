@@ -14,6 +14,7 @@
  * (history-tools.mjs CHAT_FRAMING). A walker reads it as WALKER_FRAMING says.
  */
 import type postgres from "postgres";
+import { type RouteAction, walkRoute } from "@shipbash/contracts/runtime/walk-route.mjs";
 
 import {
   CHAT_FRAMING,
@@ -266,6 +267,51 @@ export async function latestHistoryNote(reader: HistoryReader): Promise<string |
     sessions(reader, 1),
   ]);
   return legOpeningNote({ run: runs[0] ?? null, session: latest[0] ? sessionLine(reader, latest[0]) : null }, new Date(), framingOf(reader));
+}
+
+// How many of a Journey's newest passing walks are read for a route before it goes without one.
+const ROUTE_READS = 3;
+
+/**
+ * The route of each Journey's and hook's newest passing walk of its current
+ * revision, by each of its snapshot Case ids: what a walk of it is told was
+ * done on the page it is on (runner jev-route.mjs). Only a walk whose own
+ * result passed gives one.
+ */
+export async function passingRoutes(reader: HistoryReader): Promise<Record<string, RouteAction[]>> {
+  const journeys = await historyJourneys(reader.sql, reader.scope);
+  const slots = (await walkIndex(reader, journeys)).filter((slot) => slot.caseRun.verdict === "passed" && slot.objectPath);
+  const routed = await Promise.all(journeys.map(async (journey) => {
+    // A walk of an earlier revision walked other steps: only this revision's passing walks give a route.
+    const own = slots.filter((slot) => slot.caseRun.suite_case_id === journey.key
+      && (journey.revision === null || slot.caseRun.suite_case_revision === journey.revision));
+    const route = await newestPassingRoute(reader, own);
+    return route.length ? journey.caseIds.map((caseId): [string, RouteAction[]] => [caseId, route]) : [];
+  }));
+  return Object.fromEntries(routed.flat());
+}
+
+/** Whether Jev took every call of a walk record: it walked the steps in order and read each checkpoint itself. */
+function jevOnly(record: Record<string, unknown>): boolean {
+  return Array.isArray(record.steps) && record.steps.every((step) => isRecord(step) && step.actor === "jev");
+}
+
+/**
+ * The route of the best of these walks whose own result passed: the newest
+ * that Jev walked alone, or else the newest. A walk a supervising agent
+ * finished may have taken a shortcut or a detour (a search never submitted),
+ * which a route would hand on to every later walk.
+ */
+async function newestPassingRoute(reader: HistoryReader, slots: WalkSlot[]): Promise<RouteAction[]> {
+  let fallback: RouteAction[] = [];
+  for (const slot of slots.slice(0, ROUTE_READS)) {
+    const record = await stepRecord(reader, slot);
+    const route = record && isRecord(record.result) && record.result.outcome === "passed" ? walkRoute(record) : [];
+    if (!route.length) continue;
+    if (record && jevOnly(record)) return route;
+    if (!fallback.length) fallback = route;
+  }
+  return fallback;
 }
 
 /** The newest earlier walk of each Journey and hook of a Suite Run, by each of its snapshot Case ids. */

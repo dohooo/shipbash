@@ -15,10 +15,11 @@
  * Pasted without a budget, the knowledge could outgrow the run input and
  * stop every run of its Project.
  */
+import type { KnownPage } from "@shipbash/contracts/runtime/known-pages.mjs";
 import { OPENING_CONTEXT_LIMIT, TESTING_CONTEXT_KIND } from "@shipbash/contracts/runtime/opening-context.mjs";
 
 import { KNOWLEDGE_KINDS, type KnowledgeKind, type ProductKnowledgeRecord } from "./knowledge.ts";
-import { cutText, knowledgeEntryLine, knowledgePageIndexEntries, shortKnowledgeId } from "./knowledge-context.ts";
+import { cutText, knowledgeEntryLine, knowledgePageIndexEntries, knownPages, shortKnowledgeId } from "./knowledge-context.ts";
 import type { KnowledgeLine } from "./knowledge-corpus.ts";
 
 const SHOWN_SECTIONS = [
@@ -193,8 +194,8 @@ export async function loadRunKnowledge(
   list: (input: { teamId: string; projectId: string }) => Promise<ProductKnowledgeRecord[]>,
   scope: { teamId: string; projectId: string },
   testingContext: string | null,
-): Promise<RunKnowledge & { pageIndex: KnowledgeLine[] }> {
+): Promise<RunKnowledge & { pageIndex: KnowledgeLine[]; knownPages: KnownPage[] }> {
   const entries = await list({ teamId: scope.teamId, projectId: scope.projectId })
     .catch((): ProductKnowledgeRecord[] => []);
-  return { ...packRunKnowledge(testingContext, entries), pageIndex: knowledgePageIndexEntries(entries) };
+  return { ...packRunKnowledge(testingContext, entries), pageIndex: knowledgePageIndexEntries(entries), knownPages: knownPages(entries) };
 }

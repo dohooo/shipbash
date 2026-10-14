@@ -7,6 +7,7 @@ import { executeJevGoal, supervisorRecord } from "./jev-executor.mjs";
 import { jevToolCaller } from "./jev-tools.mjs";
 import { jevJson } from "./jev-actions.mjs";
 import { stepsSummary } from "./jev-steps.mjs";
+import { JEV_SETTLE_PICTURE } from "./suite-runner/case-evidence-gate.mjs";
 import { emit } from "./suite-runner/state.mjs";
 import { redactString, safeError } from "./suite-runner/redaction.mjs";
 
@@ -96,6 +97,10 @@ async function runSupportedCase(options, config, deps) {
       jev: agentServices(config.env).jev,
       signal,
       call,
+      // The route and the known pages, as the case agent read them (history-records.mjs readCaseMemory).
+      ...config.memory,
+      // The walk's last step keeps its picture before the walk is over (suite-runner/case-evidence-gate.mjs).
+      settle: () => config.onToolEvent?.({ type: JEV_SETTLE_PICTURE }),
       choose: deps.choose,
       motionMaxMs: deps.motionMaxMs,
       judge: deps.judge,

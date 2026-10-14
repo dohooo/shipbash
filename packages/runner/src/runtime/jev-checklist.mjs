@@ -132,6 +132,8 @@ export async function judge(run, state, judgements, { busyPage, waitForMove }) {
  * record the supervising agent reads does not grow by pages it never had.
  */
 async function conclude(run, state, checkpoint, verdict, judgements) {
+  // A verdict waits for the picture of the step before it, as an input does (suite-runner/case-evidence-gate.mjs).
+  await run.settle?.();
   await record(run, "checkpoint", { choice: verdict, checkpoint: checkpoint.id, ...judgements });
   await run.onCheckpoint({ ...checkpoint, status: verdict }, state);
   checkpoint.status = verdict;

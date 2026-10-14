@@ -9,6 +9,8 @@
  */
 import { createHash } from "node:crypto";
 
+import type { RouteAction } from "@shipbash/contracts/runtime/walk-route.mjs";
+
 import { isRecord } from "./is-record.ts";
 import type {
   HistoryCaseRun,
@@ -40,6 +42,8 @@ export interface RunHistoryWalk {
   checklist: HistoryChecklistItem[];
   actors: string[];
   handoff: { afterStep: number; reason: string } | null;
+  /** The route of the Journey's newest passing walk: only a Suite Run's case openings carry it (agent-data/opening.ts). */
+  route?: RouteAction[];
   /** The walk's console page, and when it was recorded as a Slack date mark: only the chat's history carries them (agent-data/). */
   url?: string;
   recordedAtMark?: string;

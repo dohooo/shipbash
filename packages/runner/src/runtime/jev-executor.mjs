@@ -7,8 +7,10 @@ import { splitWaiting } from "./action-requests.mjs";
 import { chooseJevAction, closingOptions, judgeJevCheckpoint, pageOptions } from "./jev-actions.mjs";
 import { judge, record, settle, stepRemains } from "./jev-checklist.mjs";
 import { readSteps, whichStep } from "./jev-step-questions.mjs";
-import { attribute, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
+import { attribute, currentStep, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
 import { checkInterruption, movedFrom, readPage, waitOut } from "./jev-page-reading.mjs";
+import { withKnownPages } from "./jev-known-pages.mjs";
+import { withRoute } from "./jev-route.mjs";
 import { interruption, JEV_REASONS } from "./jev-stops.mjs";
 import { terminalOptions } from "./jev-terminal.mjs";
 import { notePageMove, stepFor, walkEnd, walkSteps } from "./jev-walk-steps.mjs";
@@ -147,7 +149,12 @@ const outcome = (code, waited = false) => ({ code, waited });
 async function advance(run, state) {
   // A page Jev must not act on hands the walk back whole: the steps after it,
   // the terminal's included, are the supervising agent's.
-  const page = pageOptions(state.page, run.values);
+  // What the Journey's newest passing walk did on this page (jev-route.mjs) and
+  // the known pages the step it is on, or the next, is after (jev-known-pages.mjs) join the options.
+  const routed = withRoute(pageOptions(state.page, run.values), state, run.route, run.routeNext);
+  const step = currentStep(run.ledger);
+  const ahead = [step, run.ledger.steps[step.number]].filter(Boolean).map((each) => each.instruction).join(" ");
+  const page = withKnownPages(routed, state, run.pages, ahead);
   if (!page) return outcome("unsupported_options");
   // Terminal steps are offered only to a caller that reads a terminal (readTerminal).
   const terminal = run.readTerminal ? terminalOptions(run.terminalSteps, state.terminal?.sessionId ?? null) : [];
@@ -204,6 +211,8 @@ async function act(run, state, action, fromPage) {
   if (refused) return outcome(refused.code);
   await perform(run, action);
   attribute(run.ledger, step, run.history.at(-1).action, action);
+  // A route action taken moves the walk's place in the route past it (jev-route.mjs).
+  if (action.routeIndex !== undefined) run.routeNext = action.routeIndex + 1;
   // That a choice was not executed stops being true once one is: the note
   // stayed through a whole walk of a target product after its first choice, beside six
   // actions that ran.
@@ -297,6 +306,8 @@ function newRun(input, options) {
     reading: null,
     // The tool the walk's last input went through (perform): a wait on a running command follows a terminal one.
     lastTool: null,
+    // The place in the Journey's newest passing route after the last route action taken (jev-route.mjs).
+    routeNext: 0,
   };
 }
 
@@ -314,6 +325,8 @@ export async function executeJevGoal(input, options) {
   let ended;
   try {
     const reasonCode = await walkSteps(run, walk);
+    // A lane that takes a step's picture after it (suite-runner/case-evidence-gate.mjs) waits for the last one here.
+    await run.settle?.();
     ended = { reason: reasonCode && JEV_REASONS[reasonCode], reasonCode };
   } catch (error) {
     ended = interruption(error);
