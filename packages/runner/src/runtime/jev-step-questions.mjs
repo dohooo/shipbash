@@ -24,6 +24,15 @@ import { acceptedNoul, JEV_MODEL } from "./jev-target.mjs";
  */
 export const NEEDS_TEXT_AT = 0.23;
 export const NO_ACTION_BELOW = 0.13;
+/**
+ * A step read again once its command has ended (readStepText) stops nothing
+ * below TEXT_LIFTED_BELOW. On the 25 production walls of a conditional setup
+ * step ("if its first JSON line has need_user_action, … run the
+ * resume_command it prints") whose condition never showed, it read 0.05–0.06
+ * (75 readings); with that condition's line on the screen, 0.81–0.89 (75). A
+ * step that types a value it gives in backticks read 0.41–0.46 and stays a wall.
+ */
+export const TEXT_LIFTED_BELOW = 0.2;
 
 const needsText = (step) => ({
   type: "noul",
@@ -64,6 +73,27 @@ const needsAction = (step) => ({
     false: {
       what: "The step only verifies, reads, checks or waits for what the product shows, or keeps a value as it is, or names an action to take only if something is shown, offered or still there.",
       examples: ["Verify the order shows as shipped", "Read the CLI-opened browser tab showing Authentication Successful", "If the Wool Throw Blanket line remains, click Remove on that line"],
+    },
+  },
+});
+
+const stillNeedsText = (step) => ({
+  type: "noul",
+  instructions: `\`${step}\` was read as typing text it does not give. Its command has run: does it still need that text typed, as \`terminal\` shows the command now?`,
+  criteria: {
+    true: {
+      what: "The step types text it does not give whatever the command printed; or it types that text only if a condition it names is shown — a status, a prompt or a message — and `terminal.screen` shows that condition; or the command is still running (`terminal.running` is true); or `terminal.screen` does not show the command's result.",
+      examples: [
+        'step "Run `acme setup --agent`. If its first JSON line has "status":"need_user_action", open the url it prints, then run the resume_command it prints"; `terminal.screen` shows {"step":"auth","status":"need_user_action","url":"https://acme.test/cli/auth?ticket=8f2","resume_command":"acme setup --agent --login-ticket 8f2"}',
+        'step "Run `acme login` and enter the one-time code it prints"; `terminal.screen` shows "Enter code: "',
+      ],
+    },
+    false: {
+      what: "The step types its unquoted text only if a condition it names is shown, the command has ended (`terminal.running` is false), and `terminal.screen` shows another result where that condition would be.",
+      examples: [
+        'step "Run `acme setup --agent`. If its first JSON line has "status":"need_user_action", open the url it prints, then run the resume_command it prints"; `terminal.screen` shows {"step":"auth","status":"ok"} then {"step":"done","status":"ok"} and the shell prompt',
+        'step "Run `acme init`; if it asks for a project name, type the name the owner gave"; `terminal.screen` shows "Initialized project acme-web" and the shell prompt',
+      ],
     },
   },
 });
@@ -147,4 +177,18 @@ export async function stepsNeedingText(instructions, jev) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether a step read as typing text it does not give (readSteps) still needs
+ * that text once its command has run, asked on what the terminal shows: a
+ * step that types it only on a condition the command did not print is no wall
+ * to the steps after it. `state` carries `steps`, `history` and `terminal`.
+ * An unanswered reading is null.
+ * @param {{ steps: ReadonlyArray<string>, history: unknown[], terminal: unknown }} state
+ * @param {number} index the step's 0-based index in `state.steps`
+ */
+export async function readStepText(state, index, request) {
+  const { result, durationMs } = await ask(state, { text: stillNeedsText(`steps[${String(index)}]`) }, request);
+  return { durationMs, needsText: acceptedNoul(result, "text") };
 }
