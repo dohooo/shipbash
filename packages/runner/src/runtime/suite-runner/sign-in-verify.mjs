@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { isRecord } from "@shipbash/contracts/runtime/contract-values.mjs";
 
 import { captureFirstFrame, settleSignIn } from "../activity-runner/first-frame.mjs";
-import { indexedDbRestoreSummary, restoreIndexedDbFromStateFile } from "../browser-state-restore.mjs";
+import { indexedDbRestoreSummary, restoreStateFile } from "../browser-state-restore.mjs";
 import { captureBrowserState, cdpBaseUrl, cdpEndpoints } from "../browser-state-capture.mjs";
 import { readBrowserStateFile } from "../browser-state-seal.mjs";
 import { validateBrowserConnection } from "../browser-connection.mjs";
@@ -76,8 +76,8 @@ async function clearPreviousSignIn(env, config, statePath) {
 
 /**
  * Loads the requested saved session into the existing browser: the sealed bytes
- * onto the container's own tmpfs, `state load`, then the IndexedDB the load
- * ignores, then the product. The file goes as soon as the browser holds it.
+ * onto the container's own tmpfs, restored over CDP (browser-state-restore.mjs),
+ * then the product. The file goes as soon as the browser holds it.
  */
 export async function openProductWithSession(env, config) {
   if (config.useCurrentSession) {
@@ -94,10 +94,7 @@ export async function openProductWithSession(env, config) {
   await writeFile(statePath, config.state, { mode: 0o600 });
   try {
     await clearPreviousSignIn(env, config, statePath);
-    await agentBrowser(["state", "load", statePath], env, { timeoutMs: 30_000 });
-    const restored = await restoreIndexedDbFromStateFile({
-      agentBrowser, env, statePath, options: { timeoutMs: 30_000 },
-    });
+    const restored = await restoreStateFile({ env, statePath, timeoutMs: 30_000 });
     if (restored) emit("browser", "sign_in_indexeddb_restored", { mode: "sign_in_verify", ...indexedDbRestoreSummary(restored) });
   } finally {
     await rm(statePath, { force: true }).catch(() => {});

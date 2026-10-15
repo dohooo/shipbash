@@ -70,7 +70,6 @@ const agentBrowserCli = createAgentBrowserCli({
     ? `agent-browser ${args[0] ?? "command"} timed out.`
     : `agent-browser ${args[0] ?? "command"} exited with code ${result.code}.`),
   openFlow: {
-    stateLoadTimeoutMs: 30_000,
     onIndexedDbRestored: (outcome) =>
       emit("browser", "sign_in_indexeddb_restored", { mode: "case", ...indexedDbRestoreSummary(outcome) }),
   },

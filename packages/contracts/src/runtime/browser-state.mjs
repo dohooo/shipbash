@@ -4,12 +4,11 @@
 // (partitionKey and the real sameSite included; none is invented), and each
 // origin keeps its localStorage, sessionStorage and IndexedDB.
 //
-// The document is a superset of agent-browser's state file: `state load`
-// (0.33.1, serde without deny_unknown_fields) reads cookies, localStorage and
-// sessionStorage from it and ignores the rest, so one file serves both the
-// CLI's restore and the IndexedDB restore that follows it. A document
-// written before sessionStorage and IndexedDB were captured reads as one
-// whose origins hold neither.
+// The document keeps agent-browser's state-file shape (cookies, then origins
+// with localStorage and sessionStorage) and adds IndexedDB; the runner puts
+// all of it back over CDP (runner/src/runtime/browser-state-restore.mjs). A
+// document written before sessionStorage and IndexedDB were captured reads as
+// one whose origins hold neither.
 //
 // Dependencies: the contract-values.mjs leaf only. This is reachable from the
 // console's workflow bundle.

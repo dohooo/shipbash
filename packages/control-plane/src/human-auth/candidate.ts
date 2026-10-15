@@ -171,7 +171,7 @@ async function containerScope(sealedPath: string): Promise<ContainerScope> {
  * cookies cannot decide: analytics, CSRF and bot-management cookies land on
  * the product's site before anyone signs in, and plenty of products set no
  * cookie at all (Supabase, Auth0 on `cacheLocation: "localstorage"`, Amplify
- * keep the session in local storage, which `state load` restores the same
+ * keep the session in local storage, which the restore puts back the same
  * way). Bytes this host cannot open are taken at the container's word: it
  * seals a candidate ready only on the same verdict.
  */

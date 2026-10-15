@@ -66,7 +66,7 @@ export function activityControlLeaseReader() {
 // The outcome of this leg's sign-in state restore, kept for the first-frame
 // judgment: a state that did not load is a harness fault, not a wall.
 let lastSignInStateLoad = null;
-/** @returns {{ loaded: boolean, restoreStatus: string | null } | null} */
+/** @returns {{ loaded: boolean } | null} */
 export function signInStateRestore() {
   return lastSignInStateLoad;
 }
@@ -85,19 +85,9 @@ const agentBrowserCli = createAgentBrowserCli({
   openFlow: {
     // The restore's outcome on the record, where an expired or missing
     // sign-in used to be indistinguishable from a swapped browser.
-    onStateLoaded: (response) => {
-      const lifecycle = response?.data?.lifecycle;
-      lastSignInStateLoad = {
-        loaded: response?.data?.loaded === true,
-        restoreStatus: typeof lifecycle?.restoreStatus === "string" ? lifecycle.restoreStatus : null,
-      };
-      emit("evidence", "Sign-in state loaded", {
-        safeData: {
-          event: "sign_in_state_loaded",
-          loaded: response?.data?.loaded === true,
-          restoreStatus: typeof lifecycle?.restoreStatus === "string" ? lifecycle.restoreStatus : null,
-        },
-      });
+    onStateLoaded: () => {
+      lastSignInStateLoad = { loaded: true };
+      emit("evidence", "Sign-in state loaded", { safeData: { event: "sign_in_state_loaded", loaded: true } });
     },
     // What of the state's IndexedDB went back, on the record beside the
     // load: a Firebase sign-in that did not is the first frame's wall.

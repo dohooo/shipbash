@@ -13,8 +13,8 @@
  * first-class field, needing no extraArgs at all.
  *
  * None of these are the agent's to set (a repo-wide search finds no harness
- * use; the harness applies its own sign-in state through the CLI's `state load`
- * subcommand, never these fields), so the proxy erases them from every
+ * use; the harness restores its own sign-in state over CDP in
+ * browser-state-restore.mjs, never through these fields), so the proxy erases them from every
  * forwarded call and every advertised schema. A stripped call carries one
  * factual note so the agent learns the field is not its own.
  */
