@@ -8,35 +8,22 @@ import { prepareDesktopBrowser } from "./desktop-browser.mjs";
  * launch a browser of its own. Activity unwraps the JSON reply while the
  * suite runner keeps the full process result.
  */
-import { restoreIndexedDbFromStateFile } from "./browser-state-restore.mjs";
+import { restoreStateFile } from "./browser-state-restore.mjs";
 import {
   CLOUDFLARE_CHALLENGE_SCRIPT,
   cloudflareChallengeFromBrowserResult,
   startTrustedAccessNavigation,
 } from "./trusted-access.mjs";
 
-/** Hands the state-load reply to the runner's observer in its parsed shape. */
-function announceStateLoad(onStateLoaded, unwrapJson, stateLoad) {
-  if (!onStateLoaded) return;
-  onStateLoaded(unwrapJson ? stateLoad : stateLoad?.json);
-}
-
 /**
- * What a state file adds to an open: agent-browser's `state load` (cookies,
- * localStorage, sessionStorage), announced, then the IndexedDB restore over
- * CDP — not agent-browser's to do, state load ignores it — before the
- * product opens. The restore never blocks the open; its outcome is handed
- * to the runner's observer.
+ * What a state file adds to an open: the sign-in restored over CDP
+ * (browser-state-restore.mjs), announced, before the product opens. A state
+ * that cannot be read or set throws; what of its storage did not go back is
+ * handed to the runner's observer.
  */
-async function loadStateIntoBrowser(flow, statePath, env, options) {
-  const { agentBrowser, unwrapJson, stateLoadTimeoutMs, onStateLoaded, restoreIndexedDb, onIndexedDbRestored } = flow;
-  const stateLoad = await agentBrowser(
-    ["state", "load", statePath],
-    env,
-    stateLoadTimeoutMs === null ? options : { ...options, timeoutMs: stateLoadTimeoutMs },
-  );
-  announceStateLoad(onStateLoaded, unwrapJson, stateLoad);
-  const restored = await restoreIndexedDb({ agentBrowser, env, statePath, options, unwrapJson });
+async function loadStateIntoBrowser({ onStateLoaded, onIndexedDbRestored }, statePath, env) {
+  const restored = await restoreStateFile({ env, statePath });
+  onStateLoaded?.();
   if (restored && onIndexedDbRestored) onIndexedDbRestored(restored);
 }
 
@@ -77,9 +64,6 @@ export function createAgentBrowserCli({
   unwrapJson = false,
   openFlow = {},
 }) {
-  const {
-    stateLoadTimeoutMs = null, onStateLoaded = null, onIndexedDbRestored = null, restoreIndexedDb = restoreIndexedDbFromStateFile,
-  } = openFlow;
 
   /** Redacted, bounded post-mortem for a failed agent-browser invocation. */
   function agentBrowserDiagnostics(args, result) {
@@ -131,10 +115,7 @@ export function createAgentBrowserCli({
    */
   async function openProductionBrowser(productionUrl, statePath, env, trustedAccess, { timing = UNTIMED, ...options } = {}) {
     if (desktop) await timing.time("desktop_probe", () => prepareDesktopBrowser(agentBrowser, env, options));
-    if (statePath) {
-      const flow = { agentBrowser, unwrapJson, stateLoadTimeoutMs, onStateLoaded, restoreIndexedDb, onIndexedDbRestored };
-      await timing.time("sign_in_load", () => loadStateIntoBrowser(flow, statePath, env, options));
-    }
+    if (statePath) await timing.time("sign_in_load", () => loadStateIntoBrowser(openFlow, statePath, env));
     if (!trustedAccess) {
       await timing.time("page_open", () => agentBrowser(["open", productionUrl], env, options));
       return null;

@@ -2,8 +2,8 @@
 // localStorage, sessionStorage and IndexedDB, read inside the page and
 // serialized so it can be put back into a fresh profile, and the restore
 // that puts IndexedDB back (cookies and the two key-value storages go back
-// through agent-browser's `state load`; IndexedDB has no CDP write command,
-// so it is written by a page script as Playwright's storageScript.ts does).
+// in runner/src/runtime/browser-state-restore.mjs; IndexedDB has no CDP write
+// command, so it is written by a page script as Playwright's storageScript.ts does).
 //
 // Every function below is embedded in the page by source
 // (Function.prototype.toString) and runs there as a plain script, so each
@@ -326,9 +326,8 @@ async function restoreDatabase(indexedDB, database) {
 
 /**
  * Puts the captured databases back on this origin. Each one is deleted
- * first: `state load` navigated the real origin a moment ago, and a page
- * that creates its database on load (Firebase does) left an empty one
- * behind. A database that will not go back is named in `failed`, and the
+ * first: a page that creates its database on load (Firebase does) may have
+ * left an empty one behind. A database that will not go back is named in `failed`, and the
  * rest still go.
  *
  * @returns {Promise<{ restored: string[], failed: string[] }>}

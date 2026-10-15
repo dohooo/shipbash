@@ -10,7 +10,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import { LANE_BROWSER_CDP_URL_PATH } from "@shipbash/contracts/runtime/browser-lane.mjs";
 
-import { indexedDbRestoreSummary, restoreIndexedDbFromStateFile } from "../browser-state-restore.mjs";
+import { indexedDbRestoreSummary, restoreStateFile } from "../browser-state-restore.mjs";
 import { createControlLeaseReader } from "../control-lease-reader.mjs";
 import { prepareDesktopBrowser } from "../desktop-browser.mjs";
 import { launchHarnessBrowser } from "../harness-browser.mjs";
@@ -55,11 +55,7 @@ export async function runBrowserIdle() {
     // arrives from the canonical state file, never from profile bytes.
     const preloadStatePath = existingAuthStatePath();
     if (preloadStatePath) {
-      await agentBrowser(["state", "load", preloadStatePath], env, { timeoutMs: 30_000 });
-      // state load ignores IndexedDB; it goes back over CDP, and never blocks the lane.
-      const restored = await restoreIndexedDbFromStateFile({
-        agentBrowser, env, statePath: preloadStatePath, options: { timeoutMs: 30_000 },
-      });
+      const restored = await restoreStateFile({ env, statePath: preloadStatePath, timeoutMs: 30_000 });
       if (restored) emit("browser", "sign_in_indexeddb_restored", { mode: "browser_idle", ...indexedDbRestoreSummary(restored) });
     }
     await agentBrowser(["open", startUrl], env);
