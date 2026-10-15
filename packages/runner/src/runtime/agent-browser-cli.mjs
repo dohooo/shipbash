@@ -1,3 +1,5 @@
+import { UNTIMED } from "@shipbash/contracts/runtime/phase-timing.mjs";
+
 import { prepareDesktopBrowser } from "./desktop-browser.mjs";
 /**
  * The agent-browser CLI wrapper both container runners drive the harness's
@@ -122,19 +124,22 @@ export function createAgentBrowserCli({
   /**
    * Brings the harness's browser, launched on about:blank, to the product:
    * the desktop viewport first, the saved sign-in next, then the product
-   * itself, or the trusted-access navigation that opens it.
+   * itself, or the trusted-access navigation that opens it. A caller timing
+   * its setup passes its `timing`, and each of these steps is a phase of it;
+   * the desktop probe is the walk's first agent-browser call, so it also
+   * starts the walk's agent-browser daemon.
    */
-  async function openProductionBrowser(productionUrl, statePath, env, trustedAccess, options = {}) {
-    if (desktop) await prepareDesktopBrowser(agentBrowser, env, options);
+  async function openProductionBrowser(productionUrl, statePath, env, trustedAccess, { timing = UNTIMED, ...options } = {}) {
+    if (desktop) await timing.time("desktop_probe", () => prepareDesktopBrowser(agentBrowser, env, options));
     if (statePath) {
       const flow = { agentBrowser, unwrapJson, stateLoadTimeoutMs, onStateLoaded, restoreIndexedDb, onIndexedDbRestored };
-      await loadStateIntoBrowser(flow, statePath, env, options);
+      await timing.time("sign_in_load", () => loadStateIntoBrowser(flow, statePath, env, options));
     }
     if (!trustedAccess) {
-      await agentBrowser(["open", productionUrl], env, options);
+      await timing.time("page_open", () => agentBrowser(["open", productionUrl], env, options));
       return null;
     }
-    const cdpResult = await agentBrowser(["get", "cdp-url"], env, options);
+    const cdpResult = await timing.time("cdp_url", () => agentBrowser(["get", "cdp-url"], env, options));
     return startTrustedAccessNavigation(
       unwrapJson ? cdpResult : cdpResult.json,
       productionUrl,
