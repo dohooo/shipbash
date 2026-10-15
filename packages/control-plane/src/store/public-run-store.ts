@@ -36,7 +36,7 @@ import {
 import { runVerdictOfLatestAttempts } from "../run-verdict.ts";
 import type { SuiteRunRow, Timestamp } from "./rows.ts";
 import type { StoreConnection } from "./connection.ts";
-import { AGENT_USAGE_EVENT } from "./usage-events.ts";
+import { UNLISTED_RUN_EVENTS } from "./unlisted-run-events.ts";
 
 type Queryable = postgres.Sql | postgres.TransactionSql;
 /**
@@ -340,8 +340,8 @@ export class PublicRunStore {
    * after `after`, in one read, as the operator's run page reads its own. The
    * page's first read is the whole log so far, and each poll what was written
    * after the last sequence it holds. An id that names no member of the shared
-   * run's family reads nothing. A model call's usage is the run's accounting,
-   * not a line of its log.
+   * run's family reads nothing. The run's accounting (unlisted-run-events.ts) is not
+   * a line of its log.
    */
   async readEvents(token: string, eventsRunId: string, after: number): Promise<{
     events: PublicEvent[];
@@ -362,7 +362,7 @@ export class PublicRunStore {
       where event.team_id = ${run.team_id}::uuid and event.project_id = ${run.project_id}
         and event.suite_run_id = ${logRun.id}
         and event.sequence > ${after}
-        and event.type <> ${OPENING_CONTEXT_EVENT} and event.type <> ${AGENT_USAGE_EVENT}
+        and event.type <> ${OPENING_CONTEXT_EVENT} and event.type <> all(${[...UNLISTED_RUN_EVENTS]}::text[])
       order by event.sequence
     `;
     const origin = new Date(logRun.started_at ?? logRun.created_at).getTime();

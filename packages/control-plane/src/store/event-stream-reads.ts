@@ -10,7 +10,7 @@ import { browserStreamUrlFromMetadata } from "@shipbash/contracts/browser-connec
 import type { SuiteRunStatus } from "@shipbash/contracts/database-contract-types";
 import type { ActivityEvent, ActivityStatus, TenantActor } from "../types.ts";
 import type { ActivityEventRow } from "./rows.ts";
-import { AGENT_USAGE_EVENT } from "./usage-events.ts";
+import { UNLISTED_RUN_EVENTS } from "./unlisted-run-events.ts";
 import { mapActivityEvent } from "./workspace-maps.ts";
 
 type Queryable = postgres.Sql | postgres.TransactionSql;
@@ -28,9 +28,9 @@ export interface ActivityStreamTick {
 export interface SuiteRunStreamTick {
   status: SuiteRunStatus;
   /**
-   * The greatest sequence of the run's log, 0 when it has none: its usage
-   * records are no line of it (run-log.ts), so a stream that read every line
-   * catches up with the tick and can end.
+   * The greatest sequence of the run's log, 0 when it has none: its
+   * accounting records are no line of it (run-log.ts), so a stream that read
+   * every line catches up with the tick and can end.
    */
   lastSequence: number;
   /** The address the latest browser_stream_ready event names, or null. */
@@ -130,7 +130,7 @@ export async function readSuiteRunStreamTick(
       coalesce((
         select max(event.sequence) from public.run_events event
         where event.team_id = run.team_id and event.project_id = run.project_id
-          and event.suite_run_id = run.id and event.type <> ${AGENT_USAGE_EVENT}
+          and event.suite_run_id = run.id and event.type <> all(${[...UNLISTED_RUN_EVENTS]}::text[])
       ), 0) as last_sequence,
       stream.data as stream_data
     from public.team_memberships membership

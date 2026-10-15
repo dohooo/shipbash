@@ -186,10 +186,11 @@ export async function failedCaseAttempt(
 }
 
 /**
- * The side that opened each resource closes it, in this order. The
- * browser is the attempt's own to end, after this (executeCaseAttempt).
+ * The side that opened each resource closes it, in this order, each step
+ * timed on the attempt's close record (`timing`). The browser is the
+ * attempt's own to end, after this (executeCaseAttempt).
  */
-export async function releaseCaseAttempt(context, resources) {
+export async function releaseCaseAttempt(context, resources, timing) {
   const {
     evidenceRecorder, caseSidecar, capture, terminalLane, caseRunId, attempt,
     browserOpened, env, artifactDirectory, traceStarted, trustedAccessNavigation,
@@ -198,19 +199,19 @@ export async function releaseCaseAttempt(context, resources) {
   // The shell first: `script` ignores SIGHUP, so a session left running holds
   // its stdio pipes open and with them this process. Still before the sidecar,
   // so term_closed reaches viewers on a socket that is still up.
-  await terminalLane?.close().catch(() => {});
+  await timing.time("terminal_close", () => terminalLane?.close().catch(() => {}));
   // Evidence next: pending captures still need the sidecar's frames.
-  await evidenceRecorder?.close().catch(() => {});
+  await timing.time("evidence_close", () => evidenceRecorder?.close().catch(() => {}));
   // Read before the sidecar closes: a browser it found silent or gone is asked for nothing.
   const askBrowser = browserOpened && !caseSidecar?.browserSilent();
-  await caseSidecar?.close().catch(() => {});
-  await stopCaseStreamRecording(capture, context);
-  await collectPendingRecordings({ caseRunId, attempt, capture, outcome });
+  await timing.time("sidecar_close", () => caseSidecar?.close().catch(() => {}));
+  await timing.time("recording_stop", () => stopCaseStreamRecording(capture, context));
+  await timing.time("pending_recordings", () => collectPendingRecordings({ caseRunId, attempt, capture, outcome }));
   // A failed "no stream" announcement must not mask the case result.
-  await announceStreamPort(null).catch(() => {});
+  await timing.time("stream_retire", () => announceStreamPort(null).catch(() => {}));
   if (askBrowser) {
-    await captureArtifacts(env, artifactDirectory, traceStarted, context);
+    await timing.time("browser_artifacts", () => captureArtifacts(env, artifactDirectory, traceStarted, context));
   }
-  await trustedAccessNavigation?.close().catch(() => {});
-  await rm(agentWorkDirectory, { recursive: true, force: true });
+  await timing.time("trusted_access_close", () => trustedAccessNavigation?.close().catch(() => {}));
+  await timing.time("work_directory", () => rm(agentWorkDirectory, { recursive: true, force: true }));
 }

@@ -3,6 +3,8 @@
 // sequences in their own right — the workspace, the recording viewport, the
 // failure result and the teardown order — live next door in
 // case-attempt-phases.mjs, each called from exactly one place here.
+import { startPhaseTiming } from "@shipbash/contracts/runtime/phase-timing.mjs";
+
 import { recordingSegmentPath } from "../browser-recording.mjs";
 import { cloudflareChallengeBlockedResult } from "../case-verdicts.mjs";
 import { NOT_RETAINED } from "../evidence-recorder.mjs";
@@ -17,7 +19,7 @@ import { consumeTrustedAccessConfig } from "../trusted-access.mjs";
 
 import { HOME_DIRECTORY, SIGN_IN_HEADLESS, chromeTraceEnabled } from "./environment.mjs";
 import { redactEventValue, redactor, registerCredentialValues, registerSecret, registerTrustedAccess, safeError } from "./redaction.mjs";
-import { addWalkTime, emit, pollCancelRequested } from "./state.mjs";
+import { addWalkTime, emit, emitPhaseTiming, pollCancelRequested } from "./state.mjs";
 import {
   agentBrowser,
   announceStreamPort,
@@ -142,10 +144,10 @@ async function startChromeTrace(env, trustedAccess, context) {
  * screenshot is taken during the release and skipped while a code may still
  * be on screen. It ends with the attempt, so it never hides the next case.
  */
-async function releaseAttemptWithCredentials(context, resources, control) {
+async function releaseAttemptWithCredentials(context, resources, control, timing) {
   await control?.close().catch(() => {});
   try {
-    await releaseCaseAttempt(context, resources);
+    await releaseCaseAttempt(context, resources, timing);
   } finally {
     endScreencastBlackout();
   }
@@ -157,13 +159,14 @@ async function releaseAttemptWithCredentials(context, resources, control) {
  * cancellation or not, and whatever in the teardown before it failed: a
  * browser left running would outlive the attempt in this container.
  */
-async function finishCaseAttempt(context, { budget, walk, attemptResult, laneBrowser, resources, control }) {
+async function finishCaseAttempt(context, { budget, walk, attemptResult, laneBrowser, resources, control, timing }) {
   try {
     budget.dispose();
-    await walk.finish(attemptResult);
-    await releaseAttemptWithCredentials(context, resources, control);
+    await timing.time("walk_record", () => walk.finish(attemptResult));
+    await releaseAttemptWithCredentials(context, resources, control, timing);
   } finally {
-    await laneBrowser?.close();
+    await timing.time("browser_close", () => laneBrowser?.close());
+    emitPhaseTiming(timing, context);
   }
 }
 
@@ -190,10 +193,12 @@ async function walkCaseAttempt(
   suite, testCase, caseRunId, attempt, executionRound, statePath,
   initialChecklist, signInWriteback, firstWalk,
 ) {
-  const { artifactDirectory, agentWorkDirectory, resultPath, env } = await prepareCaseAttemptWorkspace(
-    caseRunId,
-    attempt,
-    executionRound,
+  // Each step from the workspace to the live stream, then each from the verdict to the browser closed.
+  const setup = startPhaseTiming("case_setup");
+  const close = startPhaseTiming("case_close");
+  const { artifactDirectory, agentWorkDirectory, resultPath, env } = await setup.time(
+    "workspace",
+    () => prepareCaseAttemptWorkspace(caseRunId, attempt, executionRound),
   );
   const context = { caseRunId, caseId: testCase.id, attempt, executionRound };
   // The attempt's browser once the harness launched it, which the teardown
@@ -234,40 +239,45 @@ async function walkCaseAttempt(
   });
   let agentExecution = null;
   try {
-    const trustedAccess = await consumeTrustedAccessConfig(suite.productionUrl);
+    const trustedAccess = await setup.time("trusted_access", () => consumeTrustedAccessConfig(suite.productionUrl));
     registerTrustedAccess(trustedAccess);
-    laneBrowser = await launchHarnessBrowser({ env, desktop: !SIGN_IN_HEADLESS });
-    trustedAccessNavigation = await openProductionBrowser(
-      suite.productionUrl,
-      statePath,
-      env,
-      trustedAccess,
+    laneBrowser = await setup.time("launch_browser", () => launchHarnessBrowser({ env, desktop: !SIGN_IN_HEADLESS }));
+    trustedAccessNavigation = await setup.time(
+      "open_product",
+      () => openProductionBrowser(suite.productionUrl, statePath, env, trustedAccess),
     );
     browserOpened = true;
-    const challenge = await inspectCloudflareChallenge(env);
+    const challenge = await setup.time("cloudflare_check", () => inspectCloudflareChallenge(env));
     if (challenge) {
       return endedWith(blockedByCloudflare(challenge, context, initialChecklist, testCase));
     }
-    const entryCheck = await prepareCaseEntryCheck({ productionUrl: suite.productionUrl, statePath, agentWorkDirectory });
-    credentialControl = await startCaseCredentialControl(context);
+    const entryCheck = await setup.time(
+      "entry_check",
+      () => prepareCaseEntryCheck({ productionUrl: suite.productionUrl, statePath, agentWorkDirectory }),
+    );
+    credentialControl = await setup.time("sign_in_control", () => startCaseCredentialControl(context));
     // The lane answers terminal_run from the moment the agent can call it,
     // which is its first turn — so it opens before the agent, not with the sidecar.
-    terminalLane = await createCaseTerminalLane({ artifactDirectory, context, statePath, env });
+    terminalLane = await setup.time("terminal_lane", () => createCaseTerminalLane({ artifactDirectory, context, statePath, env }));
     terminalLane.start();
     // Pixels ride their own CDP connection to the attempt's browser: the
     // sidecar follows the active tab through Target events, so no follower,
     // no stream restarts, and no frame traffic competing with the agent's
     // command channel.
-    caseSidecar = await startScreencastSidecar({
+    caseSidecar = await setup.time("screencast_sidecar", () => startScreencastSidecar({
       cdpUrl: laneBrowser.cdpUrl,
       // term_* rides the same socket and the same control lease as the pixels.
       terminalLane,
       ...caseSourceWatch(budget, context),
-    });
-    await announceStreamPort(caseSidecar.port);
-    evidenceRecorder = await startCaseEvidenceRecorder(caseSidecar, artifactDirectory, context, entryCheck?.pages.record ?? null);
-    await startCaseStreamRecording({ capture, upstreamPort: caseSidecar.port, context });
-    traceStarted = await startChromeTrace(env, trustedAccess, context);
+    }));
+    await setup.time("announce_stream", () => announceStreamPort(caseSidecar.port));
+    evidenceRecorder = await setup.time(
+      "evidence_recorder",
+      () => startCaseEvidenceRecorder(caseSidecar, artifactDirectory, context, entryCheck?.pages.record ?? null),
+    );
+    await setup.time("stream_recording", () => startCaseStreamRecording({ capture, upstreamPort: caseSidecar.port, context }));
+    traceStarted = await setup.time("chrome_trace", () => startChromeTrace(env, trustedAccess, context));
+    emitPhaseTiming(setup, context);
     emitCaseStreamReady(context);
     // Jev can act immediately: retain evidence before starting any execution.
     agentExecution = runCase(
@@ -278,13 +288,15 @@ async function walkCaseAttempt(
       budget, onToolCompleted, walk, terminalLane, credentialControl, firstWalk,
     );
     const caseResult = endedWith(reportEntryCheckRefusal(entryCheck, context, await agentExecution));
-    await credentialControl?.reportOutcome(testCase.id, caseResult, safeError);
-    await credentialControl?.close();
+    await close.time("report_outcome", () => credentialControl?.reportOutcome(testCase.id, caseResult, safeError));
+    await close.time("sign_in_close", () => credentialControl?.close());
     // The run's last authenticated case writes its sign-in state back while its
     // browser is still open (the finally below closes it), so rotated cookies
     // reach the host instead of dying with the case, and a session this case
     // signed in for with saved credentials reaches the cases after it.
-    if (signInWriteback) await signInWriteback(caseResult, env, credentialControl?.fetchedCredentials() ?? false);
+    if (signInWriteback) {
+      await close.time("sign_in_writeback", () => signInWriteback(caseResult, env, credentialControl?.fetchedCredentials() ?? false));
+    }
     return caseResult;
   } catch (error) {
     return endedWith(await failedCaseAttempt(error, {
@@ -292,7 +304,7 @@ async function walkCaseAttempt(
     }));
   } finally {
     await finishCaseAttempt(context, {
-      budget, walk, attemptResult, laneBrowser, control: credentialControl,
+      budget, walk, attemptResult, laneBrowser, control: credentialControl, timing: close,
       resources: {
         terminalLane, evidenceRecorder, caseSidecar, capture, caseRunId, attempt, browserOpened, env, artifactDirectory,
         traceStarted, trustedAccessNavigation, agentWorkDirectory, outcome: attemptResult?.outcome ?? null,

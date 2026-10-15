@@ -13,7 +13,7 @@ import { iso } from "./normalize.ts";
 import { readFamilyRuns } from "./run-family.ts";
 import { SUITE_RUN_ROW_COLUMNS, type SuiteRunRow, type Timestamp } from "./rows.ts";
 import type { SelectedRow } from "./table-rows.ts";
-import { AGENT_USAGE_EVENT } from "./usage-events.ts";
+import { UNLISTED_RUN_EVENTS } from "./unlisted-run-events.ts";
 
 type Queryable = postgres.Sql | postgres.TransactionSql;
 
@@ -78,14 +78,14 @@ async function familyOfLog(sql: Queryable, scope: LogScope): Promise<boolean> {
 }
 
 /**
- * The log's events after the cursor. A model call's usage is the run's
- * accounting, one row per model response, never a line of its log.
+ * The log's events after the cursor. The run's accounting (unlisted-run-events.ts)
+ * is never a line of its log.
  */
 function eventsAfter(sql: Queryable, scope: LogCursor) {
   return sql`
     event.team_id = ${scope.teamId}::uuid and event.project_id = ${scope.projectId}
       and event.suite_run_id = ${scope.logRunId} and event.sequence > ${scope.after}
-      and event.type <> ${AGENT_USAGE_EVENT}
+      and event.type <> all(${[...UNLISTED_RUN_EVENTS]}::text[])
   `;
 }
 

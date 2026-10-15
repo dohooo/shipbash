@@ -1,5 +1,6 @@
 import { CHECKLIST_STATUSES, CHECKLISTLESS_VERDICTS, ITEM_ID_PATTERN } from "@shipbash/contracts/runtime/checklist-contract.mjs";
 import { DIAGNOSTIC_EVENT_FIELDS, DIAGNOSTIC_EVENT_TYPES } from "@shipbash/contracts/runtime/event-contract.mjs";
+import { PHASE_TIMING_EVENT, phaseTimingFields } from "@shipbash/contracts/runtime/phase-timing.mjs";
 import { browserStreamUrlFromMetadata } from "@shipbash/contracts/browser-connection-url";
 import { agentUsageCounts } from "@shipbash/contracts/runtime/agent-usage.mjs";
 import { isPerJourneyRole } from "@shipbash/contracts/runtime/case-role-contract.mjs";
@@ -169,6 +170,8 @@ export function suiteEventData(event: DockerRuntimeEvent): Record<string, unknow
   applyHookFailureField(event, result);
   // A model response's token counters; its model, effort, tier and surface ride the allowlist.
   if (event.type === "agent_usage") Object.assign(result, agentUsageCounts(event));
+  // A timed stretch's scope and steps; its durationMs rides the allowlist.
+  if (event.type === PHASE_TIMING_EVENT) Object.assign(result, phaseTimingFields(event));
   if (event.type === "agent_pointer") applyPointerFields(event, result);
   applySignInStateFields(event, result);
   applyStreamSourceFields(event, result);

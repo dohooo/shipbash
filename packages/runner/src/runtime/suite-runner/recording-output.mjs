@@ -4,13 +4,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { startPhaseTiming } from "@shipbash/contracts/runtime/phase-timing.mjs";
+
 import { fileBrowserRecording, finalizeBrowserRecording } from "../recording-finalize.mjs";
 import { FALLBACK_NARRATION } from "../recording-playback.mjs";
 import { exportFinalizedReplay } from "../replay-export.mjs";
 
 import { OUTPUT_ROOT } from "./environment.mjs";
 import { redactEventValue, redactor, safeError } from "./redaction.mjs";
-import { emit, pendingBrowserRecordings } from "./state.mjs";
+import { emit, emitPhaseTiming, pendingBrowserRecordings } from "./state.mjs";
 
 /**
  * The replay exports, one after another in the order the cases finished. An
@@ -29,11 +31,17 @@ function startCaseReplayExport(caseRunId, attempt, recording) {
   const failed = (kind) => (error) => {
     emit("infrastructure", "artifact_capture_failed", { caseRunId, attempt, kind, message: safeError(error) });
   };
-  replayExports = replayExports.then(() => exportFinalizedReplay(recording, {
-    caseDirectory: join(OUTPUT_ROOT, caseRunId),
-    // The replay still goes out, with the browser where the shell would be.
-    reportTerminalFailure: failed("case_replay_terminal"),
-  })).catch(failed("case_replay_export"));
+  // How long it waited behind the exports before it, and how long its own took.
+  const timing = startPhaseTiming("replay_export");
+  const earlier = replayExports;
+  replayExports = timing.time("queue_wait", () => earlier)
+    .then(() => timing.time("export", () => exportFinalizedReplay(recording, {
+      caseDirectory: join(OUTPUT_ROOT, caseRunId),
+      // The replay still goes out, with the browser where the shell would be.
+      reportTerminalFailure: failed("case_replay_terminal"),
+    })))
+    .catch(failed("case_replay_export"))
+    .finally(() => emitPhaseTiming(timing, { caseRunId, attempt }));
 }
 
 export async function finalizeCaseBrowserRecording(caseRunId, attempt, result = null) {
@@ -41,17 +49,18 @@ export async function finalizeCaseBrowserRecording(caseRunId, attempt, result = 
   if (!pending) return null;
   pendingBrowserRecordings.delete(caseRunId);
   const outputDirectory = join(OUTPUT_ROOT, caseRunId);
+  const timing = startPhaseTiming("recording_close");
   try {
     // Each segment names the walk that wrote it and how that walk ended: a case
     // run walked twice gets a chapter per walk instead of one unbroken take.
-    const finalized = await finalizeBrowserRecording(pending, {
+    const finalized = await timing.time("recording_finalize", () => finalizeBrowserRecording(pending, {
       outputDirectory,
       fallback: result?.outcome === "passed" ? FALLBACK_NARRATION.passedJourney : FALLBACK_NARRATION.journey,
       // Its words masked with every secret this run registered, as its shells' logs are.
       redactor,
-    });
+    }));
     // The poster and document the console reads beside the video.
-    const recording = finalized && await fileBrowserRecording(finalized, outputDirectory);
+    const recording = finalized && await timing.time("recording_file", () => fileBrowserRecording(finalized, outputDirectory));
     if (recording) {
       startCaseReplayExport(caseRunId, attempt, recording);
       emit("browser", "browser_recording_ready", {
@@ -72,6 +81,8 @@ export async function finalizeCaseBrowserRecording(caseRunId, attempt, result = 
       message: safeError(error),
     });
     return null;
+  } finally {
+    emitPhaseTiming(timing, { caseRunId, attempt });
   }
 }
 

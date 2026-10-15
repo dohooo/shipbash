@@ -6,6 +6,8 @@
  */
 import { basename, relative, sep } from "node:path";
 
+import { PHASE_TIMING_EVENT, type PhaseTiming, startPhaseTiming } from "@shipbash/contracts/runtime/phase-timing.mjs";
+
 import type { SuiteCaseRunReference } from "../dispatch-worker-types.ts";
 import type { AppendRunEventForJobInput } from "../store/job-store-inputs.ts";
 import { recordingWalkDirectory } from "../suite-recording-source.ts";
@@ -53,17 +55,28 @@ async function retainCaseArtifacts(port: EvidencePort, reference: SuiteCaseRunRe
   return losses.length + failures.filter((failure) => failure !== null).length;
 }
 
+/** The retention's own timed stretch, beside the runner's (contracts phase-timing.mjs). */
+async function recordTiming(port: EvidencePort, timing: PhaseTiming): Promise<void> {
+  const record = timing.record();
+  if (!record) return;
+  await port.appendRunEventsForJob([{ caseRunId: null, type: PHASE_TIMING_EVENT, level: "info", message: "Phase timing.", data: record }]);
+}
+
 export async function retainSuiteEvidence(
   port: EvidencePort,
   input: { outputDirectory: string; caseRuns: ReadonlyArray<SuiteCaseRunReference> },
 ): Promise<void> {
+  const timing = startPhaseTiming("host_finalize");
   let unavailable = 0;
   for (const reference of input.caseRuns) {
     const source = await recordingWalkDirectory(input.outputDirectory, reference);
     if (!source) continue;
-    const recording = await keepRecording(port, reference.caseRunId, source, { retryFailed: false, expected: false });
-    await announceRecording(port, reference.caseRunId, recording);
-    unavailable += await retainCaseArtifacts(port, reference, source);
+    await timing.time("walk_recording", async () => {
+      const recording = await keepRecording(port, reference.caseRunId, source, { retryFailed: false, expected: false });
+      await announceRecording(port, reference.caseRunId, recording);
+    });
+    unavailable += await timing.time("walk_artifacts", () => retainCaseArtifacts(port, reference, source));
   }
   if (unavailable > 0) await port.appendRunEventsForJob([artifactsIncomplete(unavailable)]);
+  await recordTiming(port, timing);
 }
