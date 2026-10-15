@@ -6,8 +6,8 @@ import { renderJourneySteps } from "@shipbash/contracts/runtime/journey-steps.mj
 import { splitWaiting } from "./action-requests.mjs";
 import { chooseJevAction, closingOptions, pageOptions } from "./jev-actions.mjs";
 import { judge, movedBeforeHandBack, record, settle, stepRemains } from "./jev-checklist.mjs";
-import { readSteps, whichStep } from "./jev-step-questions.mjs";
-import { attribute, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
+import { readStepText, readSteps, TEXT_LIFTED_BELOW, whichStep } from "./jev-step-questions.mjs";
+import { attribute, liftTextWall, recheckable, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
 import { checkInterruption, movedFrom, readPage, waitOut } from "./jev-page-reading.mjs";
 import { withRoute } from "./jev-route.mjs";
 import { interruption, JEV_REASONS } from "./jev-stops.mjs";
@@ -183,14 +183,35 @@ async function stillOnPage(run, state, action) {
 }
 
 /**
+ * The ledger's refusal of `action` (jev-steps.mjs refuse), unless the step
+ * that stops it is a text wall whose own command has run and ended: that step
+ * is read once more, on the terminal (readStepText), and below
+ * TEXT_LIFTED_BELOW it stops the walk no longer — a step that types text only
+ * on a condition its command did not print. Recorded either way.
+ */
+async function refusal(run, state, step, action) {
+  const refused = refuse(run.ledger, step, action);
+  if (refused?.code !== "step_needs_text" || !recheckable(refused.step, state.terminal)) return refused;
+  refused.step.rechecked = true;
+  const read = { steps: run.instructions, history: run.history, terminal: state.terminal };
+  const { needsText } = await run.readStepText(read, refused.step.number - 1, run.request);
+  run.requests += 1;
+  const lifted = needsText !== null && needsText < TEXT_LIFTED_BELOW;
+  await record(run, "recheck", { choice: lifted ? "lifted" : "kept", step: refused.step.number, needsText });
+  if (!lifted) return refused;
+  liftTextWall(run.ledger, refused.step);
+  return refuse(run.ledger, step, action);
+}
+
+/**
  * Takes the chosen action. One read off the page is checked against the page
  * first: it may have moved on while Jev chose, or remounted the element the
  * choice names. A terminal action names nothing on the page, so a page that
  * moved does not discard it, and the screen is not read again: a spinner
  * redraws it between any two readings. Beside that read, the step the action
  * performs is named (jev-walk-steps.mjs stepFor), and the ledger may refuse it
- * (jev-steps.mjs refuse): the walk then hands that step back before the
- * action reaches the page.
+ * (refusal): the walk then hands that step back before the action reaches the
+ * page.
  * @param {boolean} fromPage whether the action was read off the page
  */
 async function act(run, state, action, fromPage) {
@@ -206,7 +227,7 @@ async function act(run, state, action, fromPage) {
     run.guidance = "Page changed during selection; previous choice was NOT executed.";
     return outcome(null);
   }
-  const refused = refuse(run.ledger, step, action);
+  const refused = await refusal(run, state, step, action);
   await record(run, "step", { choice: refused?.code ?? step ?? "current", step: refused?.step.number ?? step });
   if (refused) return outcome(refused.code);
   await perform(run, action);
@@ -288,6 +309,7 @@ function newRun(input, options) {
     terminalSteps,
     choose: options.choose ?? chooseJevAction,
     readSteps: options.readSteps ?? readSteps,
+    readStepText: options.readStepText ?? readStepText,
     whichStep: options.whichStep ?? whichStep,
     onDecision: options.onDecision ?? (() => {}),
     onCheckpoint: options.onCheckpoint ?? (() => {}),

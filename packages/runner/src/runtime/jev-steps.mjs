@@ -11,7 +11,7 @@ import { JEV_REASONS } from "./jev-stops.mjs";
 import { terminalSteps, withoutCodeSpans } from "./jev-terminal.mjs";
 
 /**
- * @typedef {{ number: number, id: string, instruction: string, values: string[], commands: string[], inputs: string[], keys: string[], needsText: number | null, needsAction: number | null, actions: string[], pressed: string[], remembered?: boolean }} LedgerStep
+ * @typedef {{ number: number, id: string, instruction: string, values: string[], commands: string[], inputs: string[], keys: string[], needsText: number | null, needsAction: number | null, actions: string[], pressed: string[], remembered?: boolean, rechecked?: boolean, lifted?: boolean }} LedgerStep
  * @typedef {{ code: "step_needs_text" | "step_skipped" | "steps_not_taken", step: LedgerStep }} HandBack
  * @typedef {{ steps: LedgerStep[], handedBack: HandBack | null, completed: boolean }} Ledger
  */
@@ -67,8 +67,8 @@ export function readInto(ledger, { needsText, needsAction }) {
 
 /** Whether a step types text it does not give; unanswered counts as yes. */
 // A step that types text it does not quote, unless the walk typed for it what the Journey's newest passing walk
-// typed there (jev-route.mjs: a remembered value).
-const typesUnquoted = (step) => !step.remembered && (step.needsText === null || step.needsText >= NEEDS_TEXT_AT);
+// typed there (jev-route.mjs: a remembered value), or its own command showed it no longer needs it (liftTextWall).
+const typesUnquoted = (step) => !step.remembered && !step.lifted && (step.needsText === null || step.needsText >= NEEDS_TEXT_AT);
 /** Whether a step needs an action of its own; unanswered or unsure counts as yes. */
 const needsAction = (step) => step.needsAction === null || step.needsAction >= NO_ACTION_BELOW;
 
@@ -102,6 +102,22 @@ export function refuse(ledger, number, action) {
   if (!handBack && action.remembered && typesUnquoted(step)) step.remembered = true;
   if (handBack) ledger.handedBack = handBack;
   return handBack;
+}
+
+/**
+ * Whether the step a text wall stopped at may be read again on the terminal
+ * (the executor's recheck): once, after the walk ran the step's own command
+ * and that command has ended.
+ * @param {{ running?: boolean } | null | undefined} terminal the round's terminal reading
+ */
+export function recheckable(step, terminal) {
+  return !step.rechecked && step.actions.length > 0 && terminal?.running === false;
+}
+
+/** A step whose command showed it no longer needs its unquoted text stops nothing from now on. */
+export function liftTextWall(ledger, step) {
+  step.lifted = true;
+  ledger.handedBack = null;
 }
 
 /**
