@@ -242,10 +242,7 @@ async function walkCaseAttempt(
     const trustedAccess = await setup.time("trusted_access", () => consumeTrustedAccessConfig(suite.productionUrl));
     registerTrustedAccess(trustedAccess);
     laneBrowser = await setup.time("launch_browser", () => launchHarnessBrowser({ env, desktop: !SIGN_IN_HEADLESS }));
-    trustedAccessNavigation = await setup.time(
-      "open_product",
-      () => openProductionBrowser(suite.productionUrl, statePath, env, trustedAccess),
-    );
+    trustedAccessNavigation = await openProductionBrowser(suite.productionUrl, statePath, env, trustedAccess, { timing: setup });
     browserOpened = true;
     const challenge = await setup.time("cloudflare_check", () => inspectCloudflareChallenge(env));
     if (challenge) {

@@ -3,9 +3,9 @@
  * recording, its replay export, the host's evidence retention. The runner
  * and the host time their stretches with the same timer, and the host reads
  * a runner's record back through `phaseTimingFields`. A record is the
- * stretch's `scope`, its `phases` as `{ name, ms }` in the order they ran,
- * and `durationMs` from the first step's start, so time no step covers is
- * `durationMs` minus the steps' sum. It is the run's accounting: stored with
+ * stretch's `scope`, its `phases` as `{ name, ms }` in the order they
+ * finished, and `durationMs` from the first step's start: for steps run one
+ * after another, time no step covers is `durationMs` minus the steps' sum. It is the run's accounting: stored with
  * the run, never a line of its log.
  */
 export const PHASE_TIMING_EVENT = "phase_timing";
@@ -34,6 +34,9 @@ export function startPhaseTiming(scope) {
     },
   };
 }
+
+/** The timer of a stretch nobody times: each step just runs. */
+export const UNTIMED = Object.freeze({ time: async (_name, step) => step(), record: () => null });
 
 function isPhase(value) {
   return typeof value === "object" && value !== null && typeof value.name === "string" && NAME.test(value.name)

@@ -14,6 +14,7 @@ import { recordingWalkDirectory } from "../suite-recording-source.ts";
 import { UNMASKED_TERMINAL_LOG, unmaskedTerminalLog } from "../terminal-session-log.ts";
 import { artifactLoss, artifactsIncomplete, replayExportLoss } from "./announcements.ts";
 import { isContained } from "../contained-path.ts";
+import { mapConcurrent } from "./map-concurrent.ts";
 import { artifactKind, prepareArtifactFiles } from "./artifact-files.ts";
 import { announceRecording, keepRecording } from "./recording.ts";
 import { type EvidenceFile, type EvidencePort, failureText, transferFiles } from "./transfer.ts";
@@ -62,21 +63,40 @@ async function recordTiming(port: EvidencePort, timing: PhaseTiming): Promise<vo
   await port.appendRunEventsForJob([{ caseRunId: null, type: PHASE_TIMING_EVENT, level: "info", message: "Phase timing.", data: record }]);
 }
 
+/**
+ * Walks retained at once. Walks are independent, and most of a walk's time is
+ * round trips (prepare, settle, the recording's upload), so walks overlap;
+ * within one, its files already go PUT_CONCURRENCY at a time (transfer.ts).
+ */
+const WALK_CONCURRENCY = 4;
+
+/** Keeps one walk's recording and artifacts; answers how many artifacts it lost. */
+async function retainWalk(
+  port: EvidencePort,
+  reference: SuiteCaseRunReference,
+  outputDirectory: string,
+  timing: PhaseTiming,
+): Promise<number> {
+  const source = await recordingWalkDirectory(outputDirectory, reference);
+  if (!source) return 0;
+  await timing.time("walk_recording", async () => {
+    const recording = await keepRecording(port, reference.caseRunId, source, { retryFailed: false, expected: false });
+    await announceRecording(port, reference.caseRunId, recording);
+  });
+  return timing.time("walk_artifacts", () => retainCaseArtifacts(port, reference, source));
+}
+
 export async function retainSuiteEvidence(
   port: EvidencePort,
   input: { outputDirectory: string; caseRuns: ReadonlyArray<SuiteCaseRunReference> },
 ): Promise<void> {
   const timing = startPhaseTiming("host_finalize");
-  let unavailable = 0;
-  for (const reference of input.caseRuns) {
-    const source = await recordingWalkDirectory(input.outputDirectory, reference);
-    if (!source) continue;
-    await timing.time("walk_recording", async () => {
-      const recording = await keepRecording(port, reference.caseRunId, source, { retryFailed: false, expected: false });
-      await announceRecording(port, reference.caseRunId, recording);
-    });
-    unavailable += await timing.time("walk_artifacts", () => retainCaseArtifacts(port, reference, source));
-  }
+  const losses = await mapConcurrent(
+    input.caseRuns,
+    WALK_CONCURRENCY,
+    (reference) => retainWalk(port, reference, input.outputDirectory, timing),
+  );
+  const unavailable = losses.reduce((sum, lost) => sum + lost, 0);
   if (unavailable > 0) await port.appendRunEventsForJob([artifactsIncomplete(unavailable)]);
   await recordTiming(port, timing);
 }
