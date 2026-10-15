@@ -1,6 +1,8 @@
 // The suite runner's ONE mutable-state module: run identity, cancellation,
 // the human-auth service latch, live children, and pending recordings all
 // live here so no other file duplicates shared state.
+import { PHASE_TIMING_EVENT } from "@shipbash/contracts/runtime/phase-timing.mjs";
+
 import { CancellationError, createCancellation } from "../cancellation.mjs";
 import { CANCEL_PATH } from "./environment.mjs";
 import { redactEventValue } from "./redaction.mjs";
@@ -51,4 +53,10 @@ export function emit(channel, type, fields = {}) {
     ...fields,
   });
   process.stdout.write(`${JSON.stringify(event)}\n`);
+}
+
+/** A timed stretch's record (contracts phase-timing.mjs), when it timed anything. */
+export function emitPhaseTiming(timing, fields) {
+  const record = timing.record();
+  if (record) emit("timing", PHASE_TIMING_EVENT, { ...fields, ...record });
 }
