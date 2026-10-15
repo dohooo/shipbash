@@ -5,7 +5,7 @@
 import { renderJourneySteps } from "@shipbash/contracts/runtime/journey-steps.mjs";
 import { splitWaiting } from "./action-requests.mjs";
 import { chooseJevAction, closingOptions, pageOptions } from "./jev-actions.mjs";
-import { judge, record, settle, stepRemains } from "./jev-checklist.mjs";
+import { judge, movedBeforeHandBack, record, settle, stepRemains } from "./jev-checklist.mjs";
 import { readSteps, whichStep } from "./jev-step-questions.mjs";
 import { attribute, refuse, stepLedger, walkInputs } from "./jev-steps.mjs";
 import { checkInterruption, movedFrom, readPage, waitOut } from "./jev-page-reading.mjs";
@@ -29,6 +29,21 @@ const BUSY_WAITS = 1;
 const BUSY_THRESHOLD = 0.5;
 // The guidance every walk starts with and returns to once a choice runs.
 const BEGIN = "Begin the authorized goal.";
+// The hosts of this machine's own servers, where a program in the walk's
+// terminal sends the browser: a CLI's sign-in callback (localhost:<port>/callback).
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * Whether the reading is a page a program in this walk's terminal led the
+ * browser to, and so no change of product: a local file, or a server on this
+ * machine, once the walk has a terminal of its own. Any other origin than the
+ * walk's first still ends it (origin_changed).
+ */
+function terminalLocalPage(reading) {
+  if (!reading.terminal) return false;
+  const { protocol, hostname } = new URL(reading.url);
+  return protocol === "file:" || LOOPBACK_HOSTS.has(hostname);
+}
 
 /**
  * @param {{ url: string, snapshot: string, terminal: { sessionId: string, screen: string, altScreen: boolean, running: boolean, exitCode?: number } | null }} reading
@@ -179,7 +194,11 @@ async function stillOnPage(run, state, action) {
  * @param {boolean} fromPage whether the action was read off the page
  */
 async function act(run, state, action, fromPage) {
-  if (!action || action.ref === "none") return outcome("none_chosen");
+  if (!action || action.ref === "none") {
+    // The page may still be on its way to the next one: it gets the one wait a page that settles nothing gets.
+    const moved = await movedBeforeHandBack(run, state, "none_chosen", () => movedFrom(run));
+    return outcome(moved ? null : "none_chosen");
+  }
   if (action.ref === "give_up") return outcome("stayed_busy");
   const [chosen, step] = await Promise.all([!fromPage || stillOnPage(run, state, action), stepFor(run, action)]);
   checkInterruption(run);
@@ -214,7 +233,7 @@ async function walk(run) {
     const reading = await readPage(run);
     const { url } = reading;
     origin ??= new URL(url).origin;
-    if (new URL(url).origin !== origin) return "origin_changed";
+    if (new URL(url).origin !== origin && !terminalLocalPage(reading)) return "origin_changed";
     notePageMove(run, url, seen);
     if (reading.snapshot.length > 24_000) return "page_too_large";
     const current = JSON.stringify([readingKey(reading), run.checklist.find((item) => item.status !== "passed")?.id]);

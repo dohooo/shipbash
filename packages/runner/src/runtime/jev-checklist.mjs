@@ -67,13 +67,14 @@ export async function settle(run, state, laterReadings) {
 }
 
 /**
- * Whether the current checkpoint, which reads no step left on a page that
- * settles it neither way, first gets one wait for the page to move. A page can
- * hold still with nothing out and still be on its way to the next one:
- * A target product's create had its answer, its dialog stayed unchanged, and Get started
- * opened only after the walk had read the page and handed it back. The wait
- * is spent
- * once per checkpoint, never on a page already waited out as busy, and never
+ * Whether a round about to hand back the current checkpoint — on a page that
+ * settles it neither way, or after an action round chose none — first gets one
+ * wait for the page to move. A page can hold still with nothing out and still
+ * be on its way to the next one: a target product's create had its answer, its
+ * dialog stayed unchanged, and Get started opened only after the walk had read
+ * the page and handed it back; a CLI's "Returning to your terminal…" page moved
+ * on to its callback a second after the walk chose none on it. The wait is
+ * spent once per checkpoint, never on a page already waited out as busy, and never
  * on the page the last such wait ended on: a page that keeps changing, such as
  * a clock or a live list, is judged once more and handed back, and so is the
  * next checkpoint on the page the one before settled on after its wait.
@@ -98,29 +99,38 @@ async function unsettled(run, state, judgements, busyPage) {
 }
 
 /**
+ * The one wait for the page to move a round gets before it hands back, when
+ * it gets one (waitFor), recorded as `reason`: a checkpoint the page settles
+ * neither way (judge), and an action round that chose none (the executor's
+ * act). True when the page moved: the walk reads it again in the next round.
+ * Unmoved, the round hands back on what it read before the wait, without
+ * asking Jev again. `waitForMove` waits for the page to move and returns
+ * where it ended.
+ */
+export async function movedBeforeHandBack(run, state, reason, waitForMove) {
+  const here = readingKey(run.reading);
+  if (!waitFor(run, state, here)) return false;
+  run.unsettledWaits.add(state.currentCheckpoint.id);
+  await record(run, "wait", { choice: reason });
+  const there = readingKey(await waitForMove());
+  if (there === here) return false;
+  run.waitedPage = there;
+  return true;
+}
+
+/**
  * Once no step remains before the current checkpoint, the page is judged and
  * never acted on: its verdict, or a hand-back when it settles none, after one
- * wait for the page to move when it gets one (waitFor). Moved, the page is
- * judged again in the next round; unmoved, it is handed back on the readings
- * taken before the wait, without asking Jev again: a second reading of the
- * same page could read a step left and act where the first read none, or
- * settle a verdict on that one reading alone. `busyPage` is whether the page
- * reads busy; `waitForMove` waits for it to move and returns where it ended.
+ * wait for the page to move when it gets one (movedBeforeHandBack). Unmoved,
+ * it is handed back on the readings taken before the wait: a second reading
+ * of the same page could read a step left and act where the first read none,
+ * or settle a verdict on that one reading alone. `busyPage` is whether the
+ * page reads busy.
  */
 export async function judge(run, state, judgements, { busyPage, waitForMove }) {
   const verdict = verdictOf(judgements);
   if (verdict) return conclude(run, state, state.currentCheckpoint, verdict, judgements);
-  const here = readingKey(run.reading);
-  if (waitFor(run, state, here)) {
-    run.unsettledWaits.add(state.currentCheckpoint.id);
-    await record(run, "wait", { choice: "unsettled" });
-    const reached = await waitForMove();
-    const there = readingKey(reached);
-    if (there !== here) {
-      run.waitedPage = there;
-      return null;
-    }
-  }
+  if (await movedBeforeHandBack(run, state, "unsettled", waitForMove)) return null;
   return unsettled(run, state, judgements, busyPage);
 }
 
