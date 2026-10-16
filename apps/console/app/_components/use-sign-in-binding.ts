@@ -45,11 +45,15 @@ interface SaveAttempt {
   signInId: string | null;
 }
 
-function opened(method: TeamSignInMethod, draft: PasswordDraft | null): Binding {
+/**
+ * A bind just begun. Signing in again to a saved way in starts on its row,
+ * which is where the session the person makes is kept.
+ */
+function opened(method: TeamSignInMethod, draft: PasswordDraft | null, signInId: string | null): Binding {
   return {
     method,
     phase: draft ? "form" : "opening",
-    signInId: null,
+    signInId,
     failureReason: null,
     touched: false,
     confirming: false,
@@ -139,8 +143,8 @@ function useBindingWrites(
   });
 
   const finish = useMutation({
-    mutationFn: async (method: SessionSignInMethod) => {
-      const { signIn } = await webClient.completeSignInTakeover(projectId, method);
+    mutationFn: async ({ method, signInId }: { method: SessionSignInMethod; signInId: string | null }) => {
+      const { signIn } = await webClient.completeSignInTakeover(projectId, method, signInId);
       return signIn;
     },
     onSuccess: async (signIn) => {
@@ -254,9 +258,9 @@ function useBindingSelection(options: {
   setTakeoverPhase: Dispatch<SetStateAction<TakeoverPhase>>;
 }) {
   const { loginUrl, takeover, release, setBinding, dropPicture, setTakeoverPhase } = options;
-  const pick = useCallback((method: TeamSignInMethod) => {
+  const pick = useCallback((method: TeamSignInMethod, signInId: string | null = null) => {
     const draft = method === PASSWORD_METHOD ? emptyPasswordDraft(loginUrl) : null;
-    setBinding(opened(method, draft));
+    setBinding(opened(method, draft, signInId));
     dropPicture();
     setTakeoverPhase(method === PASSWORD_METHOD ? "agent" : "claiming");
     takeover.mutate(method);
@@ -326,7 +330,9 @@ export function useSignInBinding(project: Project) {
 
   const presentation = useSignInPresentation({
     binding, phase: takeoverPhase, setPhase: setTakeoverPhase,
-    submit: (method, accepted) => finish.mutate(method, { onSuccess: accepted }),
+    // The row the bind is on, when it has one: a saved way in signed in to
+    // again, or the row an earlier try of this bind saved.
+    submit: (method, accepted) => finish.mutate({ method, signInId: binding?.signInId ?? null }, { onSuccess: accepted }),
   });
   const { drop: dropPicture } = presentation;
   const { pick, discard, cancel } = useBindingSelection({

@@ -39,8 +39,8 @@ async function handleComplete(context: RouteContext, rawProjectId: string): Prom
 	const gateway = requireGateway(options);
 	const { projectId } = parseParams(completeSignInTakeoverContract.params, { projectId: rawProjectId });
 	const teamId = await adminScope(context, projectId);
-	const { method } = await parseBody(request, completeSignInTakeoverContract.body);
-	const signIn = await gateway.complete({ actor, teamId, projectId, method });
+	const { method, signInId } = await parseBody(request, completeSignInTakeoverContract.body);
+	const signIn = await gateway.complete({ actor, teamId, projectId, method, signInId: signInId ?? null });
 	sendContractJson(response, 202, completeSignInTakeoverContract, { signIn: teamSignInView(signIn) });
 }
 

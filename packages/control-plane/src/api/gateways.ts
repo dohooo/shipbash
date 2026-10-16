@@ -51,6 +51,8 @@ export interface SignInVerificationGateway {
     teamId: string;
     projectId: string;
     method: TeamSignInMethod;
+    /** The bound way in signed in to again; null saves a new one. */
+    signInId: string | null;
   }): Promise<TeamSignIn>;
   /**
    * Checks a sign-in this Project has bound, again: the auto-login leg for a

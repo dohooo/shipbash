@@ -158,6 +158,30 @@ export async function selectThreadList(
   return { blocks: Array.isArray(reply.blocks) ? reply.blocks : [], items };
 }
 
+/**
+ * Someone deleted a reply that carried a to-do list (slack-chat/
+ * message-deletion.ts). Its kept blocks go, so nothing draws under a message
+ * that is gone, and its work rides in no list: what is still in flight is
+ * announced again by the thread's next reply, with its Stop. Found by its ts
+ * in its channel, where a ts names one message.
+ */
+export async function forgetThreadReply(
+  sql: postgres.TransactionSql,
+  input: { slackTeamId: string; channelId: string; replyTs: string },
+): Promise<void> {
+  const replies = await sql<Array<{ slack_thread_id: string }>>`
+    select reply.slack_thread_id from public.slack_thread_replies reply
+    join public.slack_threads thread on thread.id = reply.slack_thread_id
+    where thread.slack_team_id = ${nonEmpty(input.slackTeamId, "slackTeamId")}
+      and thread.channel_id = ${nonEmpty(input.channelId, "channelId")}
+      and reply.reply_ts = ${nonEmpty(input.replyTs, "replyTs")}
+  `;
+  for (const { slack_thread_id: threadId } of replies) {
+    await sql`update public.slack_thread_work set reply_ts = null where slack_thread_id = ${threadId}::uuid and reply_ts = ${input.replyTs}`;
+    await sql`delete from public.slack_thread_replies where slack_thread_id = ${threadId}::uuid and reply_ts = ${input.replyTs}`;
+  }
+}
+
 /** The thread's work in flight that no reply has carried yet, oldest first. */
 export async function selectUnannouncedThreadWork(
   sql: Queryable,

@@ -137,6 +137,30 @@ export async function closeSlackAlertThreads(
 }
 
 /**
+ * Someone deleted the message a thread hangs from (slack-chat/
+ * message-deletion.ts). Whatever it held open stops collecting replies there,
+ * so a subject still red opens a thread of its own on its next result rather
+ * than answering under a message that is gone. Bound to the teams that
+ * connected the workspace the deletion came from.
+ */
+export async function closeSlackAlertThreadsUnder(
+  sql: Queryable,
+  input: { slackTeamId: string; channelId: string; threadTs: string },
+): Promise<void> {
+  await sql`
+    update public.slack_alert_threads thread
+    set closed_at = now()
+    from public.slack_workspaces workspace
+    where workspace.slack_team_id = ${nonEmpty(input.slackTeamId, "slackTeamId")}
+      and workspace.revoked_at is null
+      and thread.team_id = workspace.team_id
+      and thread.channel_id = ${nonEmpty(input.channelId, "channelId")}
+      and thread.thread_ts = ${nonEmpty(input.threadTs, "threadTs")}
+      and thread.closed_at is null
+  `;
+}
+
+/**
  * The project stopped alerting into this channel. Its open threads there
  * describe a conversation nothing will be posted to again, so they close; its
  * threads in its other channels carry on.

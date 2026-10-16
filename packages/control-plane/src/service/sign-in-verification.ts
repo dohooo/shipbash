@@ -241,6 +241,50 @@ async function legMaterial(
 }
 
 /**
+ * A sign-in this Project has bound and is not checking right now.
+ *
+ * Read through the Project's own bindings: a sign-in this Project never bound
+ * is not one it may spend a browser on. And one row, one leg: a second leg
+ * started while the first is still going takes the exchange directory out from
+ * under it, and the leg that was already running ends `unknown` on a session
+ * it never tried.
+ */
+async function boundSignIn(
+  store: SignInVerificationStore,
+  input: { actor: TenantActor; teamId: string; projectId: string; signInId: string },
+): Promise<TeamSignIn> {
+  const bound = (await store.listProjectSignIns(input.actor, input.teamId, input.projectId))
+    .find((candidate) => candidate.id === input.signInId);
+  if (!bound) throw new HttpError(404, "NOT_FOUND", "This Project has no such sign-in.");
+  if (bound.status === "verifying") {
+    throw new HttpError(
+      409,
+      "SIGN_IN_CHECK_IN_PROGRESS",
+      "This sign-in is already being checked; wait for that check to finish.",
+    );
+  }
+  return bound;
+}
+
+/**
+ * The row a finished takeover saves to: the bound way in the person signed in
+ * to again, or a new one. Signing in again keeps the row, and with it the
+ * Projects on it and the GitHub authenticator saved for its account.
+ */
+export async function takeoverRow(
+  store: SignInVerificationStore,
+  input: Parameters<SignInVerificationGateway["complete"]>[0],
+): Promise<TeamSignIn> {
+  const { actor, teamId, projectId, method, signInId } = input;
+  if (!signInId) return store.createTeamSignIn(actor, teamId, { method });
+  const bound = await boundSignIn(store, { actor, teamId, projectId, signInId });
+  if (bound.method !== method) {
+    throw new HttpError(409, "SIGN_IN_METHOD_MISMATCH", "This sign-in is a different way in.");
+  }
+  return bound;
+}
+
+/**
  * "Check this one again", for a sign-in the Project already holds: the
  * auto-login leg for a saved password, the verification leg for a session
  * already kept. It needs no takeover browser, so a host without one can run it.
@@ -256,22 +300,7 @@ export function createSignInRecheck(context: SignInRecheckContext): SignInVerifi
         "This Project has no Production URL, so there is nothing to sign in to.",
       );
     }
-    // Read through the Project's own bindings: a sign-in this Project never
-    // bound is not one it may spend a browser on.
-    const bound = (await store.listProjectSignIns(actor, teamId, projectId))
-      .find((candidate) => candidate.id === signInId);
-    if (!bound) throw new HttpError(404, "NOT_FOUND", "This Project has no such sign-in.");
-    // One row, one leg. A second check started while the first is still
-    // going takes the exchange directory out from under it, and the check
-    // that was already running ends `unknown` on a session it never tried.
-    // `complete` is unaffected: it makes a fresh row every time.
-    if (bound.status === "verifying") {
-      throw new HttpError(
-        409,
-        "SIGN_IN_CHECK_IN_PROGRESS",
-        "This sign-in is already being checked; wait for that check to finish.",
-      );
-    }
+    const bound = await boundSignIn(store, { actor, teamId, projectId, signInId });
     const material = await legMaterial(store, { actor, teamId, signIn: bound });
     // A row that stopped trying starts again here, whichever lane it is on,
     // and the trail says so separately: "somebody asked for another check"
@@ -313,7 +342,8 @@ export function createSignInVerificationGateway(
   return {
     streamUrl: (signInId) => verify.streamUrl(signInId),
     chooseForRuns: createRunSignInChoice(context),
-    complete: async ({ actor, teamId, projectId, method }) => {
+    complete: async (input) => {
+      const { actor, teamId, projectId, method } = input;
       const project = await store.getProject(actor, teamId, projectId);
       const productionUrl = project?.productionUrl;
       if (!productionUrl) {
@@ -324,15 +354,18 @@ export function createSignInVerificationGateway(
         );
       }
       const captured = await takeover.capture(projectId);
-      const created = await store.createTeamSignIn(actor, teamId, { method });
-      const signIn = await store.updateTeamSignIn(actor, teamId, created.id, {
+      const target = await takeoverRow(store, input);
+      // A session the person just made starts the row's count over.
+      const signIn = await store.updateTeamSignIn(actor, teamId, target.id, {
         status: "verifying",
+        failureReason: null,
+        consecutiveFailures: 0,
         session: {
           state: captured.state.toString("base64"),
           version: captured.version,
           githubAccountLogin: captured.githubAccountLogin,
         },
-      }) ?? created;
+      }) ?? target;
       await store.bindProjectSignIn(actor, teamId, projectId, signIn.id);
       for (const event of [
         { actor: "user" as const, action: "saved" as const },

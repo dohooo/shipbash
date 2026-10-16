@@ -23,6 +23,7 @@ import {
   createSignInRecheck,
   type SignInVerificationContext,
   type SignInVerificationStore,
+  takeoverRow,
 } from "@shipbash/control-plane/service/sign-in-verification";
 import type { SignInTakeover, SignInTakeoverAccess } from "@shipbash/control-plane/store/sign-in-takeovers";
 import type { TargetAuthStateAccess } from "@shipbash/control-plane/store/target-auth-state";
@@ -174,17 +175,18 @@ async function release(resolved: Resolved, projectId: string): Promise<void> {
 
 /**
  * "I'm done": the way in saved for the Team as ready and bound to this
- * Project, and the session the person made sealed on the Project's profile
+ * Project, on a new row or on the saved one the person signed in to again, and
+ * the session the person made sealed on the Project's profile
  * when runs sign in with this way in — the first one the Project saves, or the
  * one they already use, whose runs parked on a sign-in then resume. The
  * browser has done its job whichever way the save went, so the Sandbox goes.
  */
 async function complete(
   resolved: Resolved,
-  input: Scope & { method: Parameters<SignInVerificationGateway["complete"]>[0]["method"] },
+  input: Parameters<SignInVerificationGateway["complete"]>[0],
 ): Promise<TeamSignIn> {
   const { dependencies, factory } = resolved;
-  const { actor, teamId, projectId, method } = input;
+  const { actor, teamId, projectId } = input;
   const productionUrl = (await dependencies.store.getProject(actor, teamId, projectId))?.productionUrl;
   if (!productionUrl) {
     throw new HttpError(409, "PRODUCTION_URL_REQUIRED", "This Project has no Production URL, so there is nowhere to keep the sign-in for.");
@@ -203,12 +205,12 @@ async function complete(
   } finally {
     await endTakeover(resolved, existing);
   }
-  const created = await dependencies.store.createTeamSignIn(actor, teamId, { method });
+  const target = await takeoverRow(dependencies.store, input);
   // A ready way in carries the session it was ticked on (team_sign_ins_ready_check).
   // The Sandbox's key died with it, so the row keeps the state itself — sealed
   // at rest by the Team keyring like everything on it — named by its own bytes,
   // with the GitHub account its cookies name.
-  const signIn = await dependencies.store.updateTeamSignIn(actor, teamId, created.id, {
+  const signIn = await dependencies.store.updateTeamSignIn(actor, teamId, target.id, {
     status: "ready",
     failureReason: null,
     consecutiveFailures: 0,
@@ -217,7 +219,7 @@ async function complete(
       version: authStateVersion(session),
       githubAccountLogin,
     },
-  }) ?? created;
+  }) ?? target;
   await dependencies.store.bindProjectSignIn(actor, teamId, projectId, signIn.id);
   await dependencies.store.recordTeamSignInEvent(actor, teamId, { signInId: signIn.id, projectId, actor: "user", action: "saved" });
   if (await dependencies.store.claimProjectRunSignIn(actor, teamId, projectId, signIn.id)) {

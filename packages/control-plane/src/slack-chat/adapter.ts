@@ -12,7 +12,9 @@ import type { AdapterPostableMessage, Message } from "chat";
 import type { SlackImageRef } from "@shipbash/contracts/steer-images";
 
 import { isRecord } from "../is-record.ts";
+import { sections } from "../slack-block-kit.ts";
 import { SLACK_UNCERTAIN_CODES } from "../slack-channels.ts";
+import { withDeleteRow } from "../slack-delete-row.ts";
 import { slackMarkdown, slackMarkdownStream } from "./slack-markdown.ts";
 
 /** Slack's streamer of one message, as Slack's Web API client opens it for Chat SDK. */
@@ -22,6 +24,47 @@ type SlackStreamer = ReturnType<SlackAdapter["webClient"]["chatStream"]>;
 function streamRenderer(): <T extends { markdown_text?: string | undefined }>(args: T) => T {
   const render = slackMarkdownStream();
   return (args) => (args.markdown_text === undefined ? args : { ...args, markdown_text: render(args.markdown_text) });
+}
+
+/** What a message is made of, as chat.postMessage and chat.update take it. */
+interface MessageContent {
+  text?: string;
+  markdown_text?: string;
+  blocks?: { type: string }[];
+}
+
+/**
+ * A message posted or drawn again with the Delete row at its foot
+ * (slack-delete-row.ts): under its blocks, or else under its words made
+ * blocks — markdown as Slack's markdown block, which is what Slack makes of
+ * `markdown_text`, and plain text as sections. Slack takes no blocks beside
+ * `markdown_text`, so that field is dropped from the call and its words
+ * become the message's notification text.
+ */
+function withFoot<Args extends MessageContent>(args: Args): Args {
+  const { blocks, markdown_text: markdown, text } = args;
+  if (blocks && blocks.length > 0) return { ...args, blocks: withDeleteRow(blocks) };
+  if (markdown) return { ...args, markdown_text: undefined, text: markdown, blocks: withDeleteRow([{ type: "markdown", text: markdown }]) };
+  if (!text) return args;
+  return { ...args, blocks: withDeleteRow(sections(text).map((words) => ({ type: "section", text: { type: "mrkdwn", text: words } }))) };
+}
+
+/** One of Slack's Web API clients the adapter calls through. */
+type SlackWebClient = SlackAdapter["webClient"];
+
+/**
+ * Sets a client to put the Delete row at the foot of every message it posts,
+ * draws again or stops streaming. A stream's words are its own: the row goes
+ * under them as the stop's blocks, which Slack appends.
+ */
+function footMessages(client: SlackWebClient): void {
+  const { chat } = client;
+  const postMessage = chat.postMessage.bind(chat);
+  const update = chat.update.bind(chat);
+  const stopStream = chat.stopStream.bind(chat);
+  chat.postMessage = (args) => postMessage(withFoot(args));
+  chat.update = (args) => update(withFoot(args));
+  chat.stopStream = (args) => stopStream({ ...args, blocks: withDeleteRow(args.blocks ?? []) });
 }
 
 /** Chat SDK's converter, whose markdown Slack renders as CommonMark would. */
@@ -51,11 +94,15 @@ class ShipBashFormatConverter extends SlackFormatConverter {
  * downloaded through the SDK's own guarded fetch (`downloadImage`), whose
  * Attachment drops the file id that files.info needs. And a thread's start
  * is read in the one call Slack allows, never paged or waited out
- * (`threadStart`).
+ * (`threadStart`). Every message it posts, draws again or stops streaming
+ * carries the Delete row at its foot; an ephemeral note does not, since it
+ * leaves on its own.
  */
 export class ShipBashSlackAdapter extends SlackAdapter {
   /** The streamer of the message each thread's reply last streamed into: one turn speaks in a thread at a time. */
   private readonly streamers = new Map<string, SlackStreamer>();
+  /** The Web API clients set to put the Delete row under what they post. */
+  private readonly footedClients = new WeakSet<SlackWebClient>();
 
   protected override readonly formatConverter = new ShipBashFormatConverter();
 
@@ -65,7 +112,7 @@ export class ShipBashSlackAdapter extends SlackAdapter {
     // has no option for one, so the streamer holds 256 characters before it calls Slack: a short reply
     // would show only when it ends. A one-character buffer sends each line as Chat SDK commits it — one
     // chat.appendStream per line at most, one call at a time, within Slack's Tier 4 limit for it.
-    const client = this._client;
+    const client = this.footed(this._client);
     const chatStream = client.chatStream.bind(client);
     client.chatStream = (params) => {
       const streamer = chatStream({ ...params, buffer_size: 1 });
@@ -81,6 +128,22 @@ export class ShipBashSlackAdapter extends SlackAdapter {
 
   override get botUserId(): string {
     return super.botUserId ?? "";
+  }
+
+  /**
+   * The client for the token the call runs as. Chat SDK makes one per bot
+   * token beside the one it calls through itself, and ShipBash posts and
+   * draws through these too, so each is footed once (`footMessages`).
+   */
+  override get webClient(): SlackWebClient {
+    return this.footed(super.webClient);
+  }
+
+  private footed(client: SlackWebClient): SlackWebClient {
+    if (this.footedClients.has(client)) return client;
+    footMessages(client);
+    this.footedClients.add(client);
+    return client;
   }
 
   /**

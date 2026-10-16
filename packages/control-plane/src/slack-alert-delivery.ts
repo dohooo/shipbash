@@ -17,6 +17,7 @@ import { isRecord } from "./is-record.ts";
 import type { SlackMessagePayload } from "./slack-alert-messages.ts";
 import type { SlackAlertRecording } from "./slack-alert-recording.ts";
 import { SlackCallError, SlackTransportError, slackCall } from "./slack-channels.ts";
+import { withDeleteRow } from "./slack-delete-row.ts";
 
 /** How long handing Slack one replay's bytes may take. */
 const UPLOAD_TIMEOUT_MS = 45_000;
@@ -37,7 +38,8 @@ function stringAt(value: unknown, key: string): string | null {
 }
 
 /**
- * Posts one message and answers with its `ts`, or null in the unlikely case
+ * Posts one message, with the Delete row at its foot (slack-delete-row.ts),
+ * and answers with its `ts`, or null in the unlikely case
  * Slack said `ok` without one. Replies never unfurl: their only URL is the
  * button's, and nothing in them should grow a preview. `parse: none` keeps a
  * customer string in `text` that reads as a URL from being linked — and so
@@ -54,7 +56,7 @@ export async function postSlackMessage(token: string, input: {
     channel: input.channelId,
     text: payload.text,
     parse: "none",
-    blocks: payload.blocks,
+    blocks: withDeleteRow(payload.blocks),
     unfurl_links: payload.unfurl_links ?? false,
     unfurl_media: payload.unfurl_media ?? false,
     ...(input.threadTs === null ? {} : { thread_ts: input.threadTs }),
@@ -123,7 +125,7 @@ async function untilShownInThread(token: string, input: { channelId: string; thr
 
 /**
  * Shares a staged file into a thread as the reply itself, the reply's blocks
- * drawn above it, and returns once the thread shows it. Slack documents no
+ * and the Delete row drawn above it, and returns once the thread shows it. Slack documents no
  * `text` here and builds the notification line itself, and the blocks hold
  * no text URL, so nothing needs unfurl flags. Slack shares the file after
  * files.completeUploadExternal answers, so a message posted at once would
@@ -139,7 +141,7 @@ export async function shareSlackFile(token: string, input: {
     files: [{ id: input.file.fileId, title: input.file.title }],
     channel_id: input.channelId,
     thread_ts: input.threadTs,
-    blocks: input.payload.blocks,
+    blocks: withDeleteRow(input.payload.blocks),
   }, token);
   await untilShownInThread(token, input);
 }

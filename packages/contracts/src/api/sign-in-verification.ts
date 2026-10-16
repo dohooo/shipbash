@@ -60,7 +60,14 @@ export const completeSignInTakeoverContract = defineApiContract({
 	path: "/api/projects/:projectId/sign-ins/takeover/complete",
 	params: projectParamsSchema,
 	query: null,
-	body: z.object({ method: sessionSignInMethodSchema }),
+	body: z.object({
+		method: sessionSignInMethodSchema,
+		/**
+		 * The saved way in the person signed in to again, which keeps the session
+		 * on its own row; a new way in has none, and gets a row of its own.
+		 */
+		signInId: idSchema.optional(),
+	}),
 	response: z.object({ signIn: projectSignInSchema }),
 	// Accepted, not done: the leg that decides is still running.
 	successStatuses: [202],

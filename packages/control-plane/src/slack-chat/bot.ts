@@ -20,10 +20,12 @@ import pg from "pg";
 import type { AgentServices } from "@shipbash/contracts/runtime/agent-model.mjs";
 
 import type { SlackAppConfiguration } from "../slack-app.ts";
+import { DELETE_MESSAGE_ACTION } from "../slack-delete-row.ts";
 import { ShipBashSlackAdapter } from "./adapter.ts";
 import { type ConversationActionContext, stopFromSlack, stopWorkFromSlack } from "./conversation-actions.ts";
 import type { SlackConversationPort } from "./conversation.ts";
 import { type InboundContext, answerMessages } from "./inbound.ts";
+import { type MessageDeletionContext, deleteMessageFromSlack, forgetDeletedMessage } from "./message-deletion.ts";
 import { PROJECT_CHOICE_ACTION, chooseProject } from "./project-choice.ts";
 import { forgetLine, keepLines } from "./thread-lines.ts";
 import { type ThreadListStore, createThreadLists } from "./thread-lists.ts";
@@ -31,7 +33,7 @@ import { STOP_WORK_ACTION } from "./todo-list.ts";
 
 export type SlackChatBot = Chat<{ slack: ShipBashSlackAdapter }>;
 
-export type SlackChatStore = InboundContext["store"] & ConversationActionContext["store"] & ThreadListStore;
+export type SlackChatStore = InboundContext["store"] & ConversationActionContext["store"] & MessageDeletionContext["store"] & ThreadListStore;
 
 export interface SlackChat {
   bot: SlackChatBot;
@@ -110,9 +112,14 @@ export function createSlackChat(input: {
   // are what a conversation that starts in it opens on (thread-lines.ts).
   bot.onNewMessage(/[\s\S]*/u, (_thread, message, queued) => keepLines(context, [...(queued?.skipped ?? []), message], "line"));
   bot.onMessageUpdated((_thread, message) => keepLines(context, [message], "edit"));
-  bot.onMessageDeleted((event) => forgetLine(context, event.threadId, event.messageId).catch((error: unknown) => {
-    console.error(`[slack-chat] line ${event.messageId} in ${event.threadId} could not be forgotten:`, error);
-  }));
+  // A deleted message of ShipBash's own also lets go of what hung from it, whoever deleted it (message-deletion.ts).
+  const deleting: MessageDeletionContext = { slack, store };
+  bot.onMessageDeleted(async (event) => {
+    await forgetLine(context, event.threadId, event.messageId).catch((error: unknown) => {
+      console.error(`[slack-chat] line ${event.messageId} in ${event.threadId} could not be forgotten:`, error);
+    });
+    await forgetDeletedMessage(deleting, event.threadId, event.messageId);
+  });
   bot.onAction(PROJECT_CHOICE_ACTION, (event) => chooseProject(context, event));
   // The owner's Stop — Slack's on the thread, or the one beside a piece of
   // work — which redraws the lists of what it stopped through the posting
@@ -121,6 +128,8 @@ export function createSlackChat(input: {
   const stopping: ConversationActionContext = { slack, store, conversations, lists: createThreadLists({ store, publicOrigin }) };
   bot.onAgentSessionStopped((event) => stopFromSlack(stopping, event));
   bot.onAction(STOP_WORK_ACTION, (event) => stopWorkFromSlack(stopping, event));
+  // The Delete at the foot of every message ShipBash posts, for anyone who sees it.
+  bot.onAction(DELETE_MESSAGE_ACTION, (event) => deleteMessageFromSlack(deleting, event));
   return {
     bot,
     async close() {
