@@ -324,7 +324,9 @@ h1 { margin-bottom: 7px; font-size: clamp(25px, 3vw, var(--text-3xl)); line-heig
 .rp-poster:not([hidden]) + .qrp-caption, .qrp-caption:has(+ .rp-poster) { display: none; }
 /* With a cover on it, the stage is not empty: saying so under the scrim reads
    as two answers to one question. Only the words go — the empty frame is the
-   one box the absolutely placed cover has to sit on. */
+   one box the absolutely placed cover has to sit on, shaped like the
+   recording it stands in for. */
+.case-evidence-stage:has(.rp-poster) .case-evidence-empty { width: 100%; aspect-ratio: var(--browser-aspect, 16 / 9); }
 .case-evidence-stage:has(.rp-poster) .case-evidence-empty strong { visibility: hidden; }
 .rp-poster-ink { display: grid; gap: 14px; padding: clamp(26px, 5vw, 52px) clamp(16px, 2.6vw, 28px) clamp(16px, 2.6vw, 28px); }
 .rp-poster button, .rp-poster a, .rp-poster-desc { pointer-events: auto; }
