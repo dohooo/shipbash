@@ -85,13 +85,15 @@ function verifyTarget(signIn: TeamSignIn, home: Project | null): Project | null 
 }
 
 /**
- * The row's quiet actions: which products stop using this way in (a product's
- * own binding, not the team's credential), the way back in that needs no
- * password when the row is paused, and Remove, which asks first.
+ * The row's quiet actions: signing in to this way in again, which products
+ * stop using it (a product's own binding, not the team's credential), the way
+ * back in that needs no password when the row is paused, and Remove, which
+ * asks first.
  */
-function RowMenu({ method, projects, takeover, onUnbind, onRemove }: {
+function RowMenu({ method, projects, again, takeover, onUnbind, onRemove }: {
   method: TeamSignIn["method"];
   projects: readonly Project[];
+  again: Route | null;
   takeover: Route | null;
   onUnbind: (projectId: string) => void;
   onRemove: () => void;
@@ -102,6 +104,11 @@ function RowMenu({ method, projects, takeover, onUnbind, onRemove }: {
         <MoreHorizontal aria-hidden="true" />
       </Dropdown.Trigger>
       <Dropdown.Content className="row-menu-content">
+        {again ? (
+          <Dropdown.Close>
+            <Link href={again}>Sign in again</Link>
+          </Dropdown.Close>
+        ) : null}
         {projects.map((project) => (
           <Dropdown.Close key={project.id}>
             <button type="button" onClick={() => onUnbind(project.id)}>Stop using on {project.name}</button>
@@ -112,7 +119,7 @@ function RowMenu({ method, projects, takeover, onUnbind, onRemove }: {
             <Link href={takeover}>Use takeover instead</Link>
           </Dropdown.Close>
         ) : null}
-        {projects.length > 0 || takeover ? <Dropdown.Separator /> : null}
+        {again || projects.length > 0 || takeover ? <Dropdown.Separator /> : null}
         <Dropdown.Close>
           <button type="button" data-danger="" onClick={onRemove}>Remove</button>
         </Dropdown.Close>
@@ -168,11 +175,10 @@ function SignInRow({ signIn, projects, runsOn, admin, onRemove, onVerify, again,
         {signIn.status === "ready" ? null : <span className={`status-pill${state.tone}`}>{state.text}</span>}
         <RunsMark projects={runsOn} />
         <SignInWhere projects={projects} />
-        {admin && again ? <Link className="button" href={again}>Sign in again</Link> : null}
         {admin && onVerify ? (
           <button className="button" type="button" onClick={onVerify}>Check again</button>
         ) : null}
-        {admin ? <RowMenu method={signIn.method} projects={projects} takeover={takeover} onUnbind={onUnbind} onRemove={onRemove} /> : null}
+        {admin ? <RowMenu method={signIn.method} projects={projects} again={again} takeover={takeover} onUnbind={onUnbind} onRemove={onRemove} /> : null}
       </span>
     </li>
   );
