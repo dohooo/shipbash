@@ -51,6 +51,7 @@ import {
   type ThreadWorkPlace,
   type UnannouncedWork,
   announceThreadWork,
+  forgetThreadReply,
   selectThreadList,
   selectThreadWorkPlace,
   selectUnannouncedThreadWork,
@@ -63,6 +64,7 @@ import {
   selectSlackThreadAtWork,
 } from "./slack-thread-work.ts";
 import { type PostSubject, type StopInput, type StoppedWork, selectStopped, stopThreadWork } from "./slack-thread-stops.ts";
+import { closeSlackAlertThreadsUnder } from "./slack-alert-threads.ts";
 import { type SuiteScheduleTiming, selectSuiteScheduleTiming } from "./suite-schedules.ts";
 import { type WalkReplay, type WalkReport, selectWalkReplay, selectWalkReport } from "./walks.ts";
 import {
@@ -189,6 +191,19 @@ export class InternalSlackStore extends InternalSlackAlertsStore {
       select suite_run_id, activity_id from public.dispatch_jobs where id = ${jobId}::uuid
     `;
     return job ? { suiteRunId: job.suite_run_id, activityId: job.activity_id } : null;
+  }
+
+  /**
+   * What the store kept about a message of ShipBash's that is gone from Slack,
+   * at its ts in its channel: an alert thread it opened closes, and a to-do
+   * list it carried is let go. Saying it again changes nothing.
+   */
+  async forgetSlackMessageInternal(input: { slackTeamId: string; channelId: string; ts: string }): Promise<void> {
+    const { slackTeamId, channelId, ts } = input;
+    await this.sql.begin(async (tx) => {
+      await closeSlackAlertThreadsUnder(tx, { slackTeamId, channelId, threadTs: ts });
+      await forgetThreadReply(tx, { slackTeamId, channelId, replyTs: ts });
+    });
   }
 
   /** The to-do list under the reply, as its work stands; null for a reply that carries none. */

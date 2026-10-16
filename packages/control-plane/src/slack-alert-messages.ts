@@ -16,7 +16,8 @@
  * ② failed carries no video and no button. Its run URL is the linked suite
  * name, and it is posted with `unfurl_links`, so Slack's own preview draws the
  * run's card under it. No reply puts a URL in its text or rich text, because
- * a text URL is what Slack unfurls; a URL button is not.
+ * a text URL is what Slack unfurls; a URL button is not. Delivery puts the
+ * Delete row at the foot of every one of them (slack-delete-row.ts).
  */
 import { evidenceCommand } from "@shipbash/contracts/runtime/evidence-command.mjs";
 

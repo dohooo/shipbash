@@ -15,6 +15,7 @@ import type { SlackDeliveryError } from "@shipbash/contracts/database-contract-t
 
 import { isRecord } from "./is-record.ts";
 import { connectionMessage } from "./slack-alert-messages.ts";
+import { withDeleteRow } from "./slack-delete-row.ts";
 
 /** A channel this workspace offers, as the pane lists it. */
 export interface SlackChannel {
@@ -216,7 +217,7 @@ async function joinSlackChannel(token: string, channelId: string): Promise<void>
   await slackCall("conversations.join", { channel: channelId }, token);
 }
 
-/** The connection message: which project now alerts here, and who set it up. */
+/** The connection message: which project now alerts here, and who set it up, with the Delete row at its foot. */
 async function postSlackTestMessage(token: string, input: {
   channelId: string;
   projectName: string;
@@ -227,7 +228,7 @@ async function postSlackTestMessage(token: string, input: {
     channel: input.channelId,
     text: message.text,
     parse: "none",
-    blocks: message.blocks,
+    blocks: withDeleteRow(message.blocks),
   }, token);
 }
 

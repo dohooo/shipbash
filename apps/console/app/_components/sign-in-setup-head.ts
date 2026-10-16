@@ -54,8 +54,10 @@ export function railHead(binding: Binding | null, saved: readonly TeamSignIn[], 
     const name = METHOD_NAMES[binding.method];
     if (binding.phase === "verifying") return { title: `Checking the ${name} sign-in`, lede: VERIFY_LEDE };
     if (binding.method === PASSWORD_METHOD) return { title: name, lede: PASSWORD_LEDE };
+    const lede = binding.touched ? FINISH_LEDE : WATCHING_LEDE;
+    if (binding.signInId) return { title: `Signing in again · ${name}`, lede };
     const article = VOWEL_SOUND_METHODS.has(binding.method) ? "an" : "a";
-    return { title: `Adding ${article} ${name} sign-in`, lede: binding.touched ? FINISH_LEDE : WATCHING_LEDE };
+    return { title: `Adding ${article} ${name} sign-in`, lede };
   }
   if (saved.length === 0) return { title: `How does ShipBash get into ${host}?`, lede: PICK_LEDE };
   return { title: savedTitle(saved.length), lede: savedLede(saved) };

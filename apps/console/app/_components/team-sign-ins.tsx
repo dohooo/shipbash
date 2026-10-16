@@ -13,7 +13,7 @@ import { useWorkspace } from "./shell";
 import { teamProjects } from "./workspace-address";
 import { projectMark } from "./workspace-marks";
 import type { Workspace } from "./workspace-session";
-import { METHOD_NAMES, SignInMark } from "./sign-in-methods";
+import { METHOD_NAMES, PASSWORD_METHOD, SignInMark } from "./sign-in-methods";
 import { PausedHint, signInState } from "./sign-in-status";
 import { Dropdown } from "./dropdown";
 import { GitHubAuthenticatorEditor, GitHubAuthenticatorFact } from "./github-authenticator";
@@ -55,6 +55,22 @@ function takeoverHref(
 }
 
 /**
+ * Where "Sign in again" goes, or null when it is not offered. A way in that
+ * keeps a session a person made holds it only until the provider ends it,
+ * which no status on this row can see coming, so the browser is always offered
+ * back — on the Project in scope, or one that uses this way in. The password
+ * lane signs in by itself, which is "Check again".
+ */
+function signInAgainHref(
+  signIn: TeamSignIn,
+  home: Project | null,
+  teamHref: Workspace["teamHref"],
+): Route | null {
+  if (signIn.method === PASSWORD_METHOD || !home) return null;
+  return teamHref(`/settings/sign-ins/${encodeURIComponent(signIn.id)}/again`, { project: home.slug });
+}
+
+/**
  * Where "Check again" would run, or null when it cannot run anywhere. A sign-in
  * belongs to the Team, but proving one means opening a product with it, so the
  * row can only offer the check where a product actually uses this way in. A row
@@ -62,14 +78,10 @@ function takeoverHref(
  * nothing left to open, and the check would fail for a reason the reader cannot
  * act on.
  */
-function verifyTarget(
-  signIn: TeamSignIn,
-  projects: readonly Project[],
-  scoped: Project | null,
-): Project | null {
+function verifyTarget(signIn: TeamSignIn, home: Project | null): Project | null {
   if (!signIn.keyAvailable) return null;
   if (signIn.status !== "paused" && signIn.status !== "failed") return null;
-  return projects.find((project) => project.id === scoped?.id) ?? projects[0] ?? null;
+  return home;
 }
 
 /**
@@ -121,7 +133,7 @@ function RunsMark({ projects }: { projects: readonly Project[] }) {
   );
 }
 
-function SignInRow({ signIn, projects, runsOn, admin, onRemove, onVerify, takeover, authenticatorProject, onAuthenticator, onUnbind }: {
+function SignInRow({ signIn, projects, runsOn, admin, onRemove, onVerify, again, takeover, authenticatorProject, onAuthenticator, onUnbind }: {
   signIn: TeamSignIn;
   projects: readonly Project[];
   /** The products whose verification runs sign in with this way in. */
@@ -130,6 +142,8 @@ function SignInRow({ signIn, projects, runsOn, admin, onRemove, onVerify, takeov
   onRemove: () => void;
   /** Hand the saved session to a leg once more, when a product can receive it. */
   onVerify: (() => void) | null;
+  /** The browser back, to sign in to this way in again. */
+  again: Route | null;
   /** The way back in that does not need a password, when this row is paused. */
   takeover: Route | null;
   authenticatorProject: Project | null;
@@ -154,6 +168,7 @@ function SignInRow({ signIn, projects, runsOn, admin, onRemove, onVerify, takeov
         {signIn.status === "ready" ? null : <span className={`status-pill${state.tone}`}>{state.text}</span>}
         <RunsMark projects={runsOn} />
         <SignInWhere projects={projects} />
+        {admin && again ? <Link className="button" href={again}>Sign in again</Link> : null}
         {admin && onVerify ? (
           <button className="button" type="button" onClick={onVerify}>Check again</button>
         ) : null}
@@ -203,22 +218,25 @@ function TeamSignInRows({ signIns, usage, runs, scoped, admin, teamHref, onRemov
     <ul className="settings-list signin-list">
       {signIns.map((signIn) => {
         const used = usage.get(signIn.id) ?? [];
-        const target = verifyTarget(signIn, used, scoped);
-        const authenticatorProject = used.find((entry) => entry.id === scoped?.id) ?? used[0] ?? null;
+        // A row's actions open a product: the one in scope when it uses this
+        // way in, otherwise the first that does.
+        const home = used.find((entry) => entry.id === scoped?.id) ?? used[0] ?? null;
+        const target = verifyTarget(signIn, home);
         return (
           <SignInRow
             key={signIn.id}
             admin={admin}
             onRemove={() => onRemove(signIn.id)}
             onVerify={target ? () => onVerify(target.id, signIn.id) : null}
-            authenticatorProject={authenticatorProject}
+            authenticatorProject={home}
             onAuthenticator={() => {
-              if (authenticatorProject) onAuthenticator(authenticatorProject.id, signIn.id);
+              if (home) onAuthenticator(home.id, signIn.id);
             }}
             onUnbind={(projectId) => onUnbind(projectId, signIn.id)}
             projects={used}
             runsOn={runs.get(signIn.id) ?? []}
             signIn={signIn}
+            again={signInAgainHref(signIn, home, teamHref)}
             takeover={takeoverHref(signIn, used, scoped, teamHref)}
           />
         );

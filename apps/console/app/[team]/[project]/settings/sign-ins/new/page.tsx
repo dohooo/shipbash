@@ -9,7 +9,7 @@ export default function Page({ params }: { params: Promise<{ team: string; proje
   return (
     <ProductPage
       params={params}
-      fallback={<SignInAddSkeleton />}
+      fallback={<SignInAddSkeleton title="Add a way in" />}
       prefetch={(client, { projectId }) => client.prefetchQuery(serverReadQuery("projectSignIns", projectId))}
     >
       <SignInAddPage />

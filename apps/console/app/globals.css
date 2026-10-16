@@ -323,8 +323,9 @@ h1 { margin-bottom: 7px; font-size: clamp(25px, 3vw, var(--text-3xl)); line-heig
 .rp-poster { position: absolute; inset: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; overflow: hidden; pointer-events: none; background: linear-gradient(to top, rgba(10,10,12,.93) 0%, rgba(10,10,12,.9) 22%, rgba(10,10,12,.84) 36%, rgba(10,10,12,.74) 48%, rgba(10,10,12,.6) 60%, rgba(10,10,12,.42) 72%, rgba(10,10,12,.24) 84%, rgba(10,10,12,.1) 93%, rgba(10,10,12,0) 100%); }
 .rp-poster:not([hidden]) + .qrp-caption, .qrp-caption:has(+ .rp-poster) { display: none; }
 /* With a cover on it, the stage is not empty: saying so under the scrim reads
-   as two answers to one question. */
-.case-evidence-stage:has(.rp-poster) .case-evidence-empty { display: none; }
+   as two answers to one question. Only the words go — the empty frame is the
+   one box the absolutely placed cover has to sit on. */
+.case-evidence-stage:has(.rp-poster) .case-evidence-empty strong { visibility: hidden; }
 .rp-poster-ink { display: grid; gap: 14px; padding: clamp(26px, 5vw, 52px) clamp(16px, 2.6vw, 28px) clamp(16px, 2.6vw, 28px); }
 .rp-poster button, .rp-poster a, .rp-poster-desc { pointer-events: auto; }
 /* The run's own words are the page's ONLY copy of them, so they are never

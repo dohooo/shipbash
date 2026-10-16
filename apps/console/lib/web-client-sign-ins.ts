@@ -56,12 +56,17 @@ export const signInsClient = {
   /**
    * "I'm done". It answers with a sign-in that is `verifying`, never one that
    * is ready: the tick comes from the leg this call starts, which the page
-   * follows with readSignInVerification.
+   * follows with readSignInVerification. With `signInId` the session lands on
+   * that saved way in, the one the person signed in to again.
    */
   completeSignInTakeover: (
     projectId: string,
     method: Exclude<TeamSignInMethod, "email_password">,
-  ) => callApi(completeSignInTakeoverContract, { params: { projectId }, body: { method } }),
+    signInId: string | null,
+  ) => callApi(completeSignInTakeoverContract, {
+    params: { projectId },
+    body: signInId ? { method, signInId } : { method },
+  }),
   /**
    * Check a saved sign-in again, on the row it is already stored on. For the
    * password lane this is `Save and verify`: ShipBash types the credential
